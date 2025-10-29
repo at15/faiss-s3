@@ -263,27 +263,27 @@ private:
           ivf_index->code_size, placeholder->cluster_sizes);
 
       // Configure cache size from environment variable
-      const char *cache_size_env = std::getenv(ENV_CACHE_SIZE_MB);
-      size_t cache_size_mb = DEFAULT_CACHE_SIZE_MB;
+      const char *cache_size_env = std::getenv(kEnvCacheSizeMB);
+      size_t cache_size_mb = kDefaultCacheSizeMB;
       if (cache_size_env) {
         try {
           cache_size_mb = std::stoull(cache_size_env);
           std::cout << "[Server] Using cache size from env: " << cache_size_mb
                     << " MB" << std::endl;
         } catch (...) {
-          std::cerr << "[Server] Invalid " << ENV_CACHE_SIZE_MB
+          std::cerr << "[Server] Invalid " << kEnvCacheSizeMB
                     << " value, using default: " << cache_size_mb << " MB"
                     << std::endl;
         }
       } else {
         std::cout << "[Server] Using default cache size: " << cache_size_mb
-                  << " MB (set " << ENV_CACHE_SIZE_MB << " to override)"
+                  << " MB (set " << kEnvCacheSizeMB << " to override)"
                   << std::endl;
       }
 
       // Set cache limit (0 = unlimited)
-      if (cache_size_mb > UNLIMITED_CACHE) {
-        s3_invlists->set_max_cache_bytes(cache_size_mb * BYTES_PER_MB);
+      if (cache_size_mb > kUnlimitedCache) {
+        s3_invlists->SetMaxCacheBytes(cache_size_mb * kBytesPerMB);
       }
 
       // Replace placeholder with on-demand inverted lists
@@ -404,9 +404,9 @@ private:
 
       std::cout << "[Client " << socket_fd_
                 << "] Search completed: cache_hits="
-                << index_state->s3_invlists_->cache_hits()
+                << index_state->s3_invlists_->CacheHits()
                 << ", cache_misses="
-                << index_state->s3_invlists_->cache_misses() << std::endl;
+                << index_state->s3_invlists_->CacheMisses() << std::endl;
 
       // Send text response
       std::map<std::string, std::string> response;
@@ -474,8 +474,8 @@ private:
         for (const auto &kv : server_state_->GetLoadedIndexes()) {
           const IndexState &state = kv.second;
           if (state.s3_invlists_) {
-            total_hits += state.s3_invlists_->cache_hits();
-            total_misses += state.s3_invlists_->cache_misses();
+            total_hits += state.s3_invlists_->CacheHits();
+            total_misses += state.s3_invlists_->CacheMisses();
           }
         }
       }
@@ -512,17 +512,17 @@ private:
 
       response["cluster_count"] = std::to_string(ivf->nlist);
       response["cache_hits"] =
-          std::to_string(index_state->s3_invlists_->cache_hits());
+          std::to_string(index_state->s3_invlists_->CacheHits());
       response["cache_misses"] =
-          std::to_string(index_state->s3_invlists_->cache_misses());
+          std::to_string(index_state->s3_invlists_->CacheMisses());
       response["cached_clusters"] =
-          std::to_string(index_state->s3_invlists_->cache_size());
+          std::to_string(index_state->s3_invlists_->CacheSize());
       response["cache_bytes"] =
-          std::to_string(index_state->s3_invlists_->cache_bytes());
+          std::to_string(index_state->s3_invlists_->CacheBytes());
       response["cache_mb"] = std::to_string(
-          index_state->s3_invlists_->cache_bytes() / BYTES_PER_MB);
+          index_state->s3_invlists_->CacheBytes() / kBytesPerMB);
       response["max_cache_mb"] = std::to_string(
-          index_state->s3_invlists_->get_max_cache_bytes() / BYTES_PER_MB);
+          index_state->s3_invlists_->GetMaxCacheBytes() / kBytesPerMB);
       response["nprobe"] = std::to_string(ivf->nprobe);
 
       SendResponse(ProtocolParser::FormatResponse(response));

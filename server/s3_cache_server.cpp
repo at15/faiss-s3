@@ -56,7 +56,7 @@ void SignalHandler(int signal) {
  * the main accept loop. Handles graceful shutdown on signals.
  */
 int main(int argc, char *argv[]) {
-  int port = faiss_s3::DEFAULT_SERVER_PORT;
+  int port = faiss_s3::kDefaultServerPort;
 
   // Parse command-line arguments
   if (argc > 1) {

@@ -29,18 +29,18 @@ inline std::shared_ptr<Aws::S3Crt::S3CrtClient> CreateS3Client() {
   Aws::S3Crt::ClientConfiguration config;
 
   // Check for custom endpoint (for S3Mock or MinIO)
-  const char *endpoint = std::getenv(ENV_S3_ENDPOINT_URL);
+  const char *endpoint = std::getenv(kEnvS3EndpointURL);
   if (endpoint) {
     config.endpointOverride = endpoint;
     std::cout << "[S3] Using custom endpoint: " << endpoint << std::endl;
   }
 
   // Check for region
-  const char *region = std::getenv(ENV_AWS_REGION);
+  const char *region = std::getenv(kEnvAWSRegion);
   if (region) {
     config.region = region;
   } else {
-    config.region = DEFAULT_AWS_REGION;
+    config.region = kDefaultAWSRegion;
   }
 
   return std::make_shared<Aws::S3Crt::S3CrtClient>(config);
@@ -113,7 +113,7 @@ DownloadRangeFromS3(ClientPtr client_ptr, const std::string &bucket,
 
   std::cout << "[S3] Downloaded range from s3://" << bucket << "/" << key
             << " [" << offset << ":" << (offset + size - 1) << "] "
-            << "(" << (size / BYTES_PER_KB) << " KB)" << std::endl;
+            << "(" << (size / kBytesPerKB) << " KB)" << std::endl;
 
   return data;
 }

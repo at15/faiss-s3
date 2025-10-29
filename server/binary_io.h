@@ -90,9 +90,9 @@ public:
     }
 
     // Validate array size to prevent OOM attacks
-    if (length > MAX_BINARY_ARRAY_SIZE) {
+    if (length > kMaxBinaryArraySize) {
       std::cerr << "[BinaryIO] Array size too large: " << length << " bytes (max "
-                << MAX_BINARY_ARRAY_SIZE << " bytes)" << std::endl;
+                << kMaxBinaryArraySize << " bytes)" << std::endl;
       return false;
     }
 
@@ -145,9 +145,9 @@ public:
       if (ch == '\n') {
         break; // End of line
       }
-      if (line.size() >= MAX_COMMAND_LINE_LENGTH) {
+      if (line.size() >= kMaxCommandLineLength) {
         std::cerr << "[BinaryIO] Command line too long (max "
-                  << MAX_COMMAND_LINE_LENGTH << " bytes)" << std::endl;
+                  << kMaxCommandLineLength << " bytes)" << std::endl;
         return false;
       }
       line += ch;
