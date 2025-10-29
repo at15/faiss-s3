@@ -6,6 +6,8 @@ Original implementation: https://github.com/at15/faiss/tree/at15/faiss-on-s3/dem
 ## TODO
 
 - [ ] e2e test script in python
+- [ ] github action (with cache on faiss and aws-sdk?)
+- [ ] benchmark using larger dataset
 
 ## Usage
 

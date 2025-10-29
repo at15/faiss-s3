@@ -1,0 +1,65 @@
+name: CI - Build Base Image
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
+  push:
+    paths:
+      - 'server/deps/build-s3-sdk.sh'
+      - 'server/deps/build-faiss.sh'
+      - 'server/ci/Dockerfile.base'
+      - 'server/ci/install-build-deps.sh'
+
+jobs:
+  build-base:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/ci-base
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix={{date 'YYYYMMDD'}}-
+
+      - name: Build and push base image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          file: ./server/ci/Dockerfile.base
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/ci-base:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/ci-base:buildcache,mode=max
+
+      - name: Output build summary
+        run: |
+          echo "### Base Image Build Complete ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`ghcr.io/${{ github.repository }}/ci-base:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Time:** ~15-20 minutes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This base image contains:" >> $GITHUB_STEP_SUMMARY
+          echo "- AWS SDK C++ (S3-CRT client)" >> $GITHUB_STEP_SUMMARY
+          echo "- FAISS vector search library" >> $GITHUB_STEP_SUMMARY

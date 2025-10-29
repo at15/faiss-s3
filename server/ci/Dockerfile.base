@@ -1,0 +1,25 @@
+# CI: Base image with dependencies only
+# Builds: AWS SDK C++ + FAISS
+# Push to: ghcr.io/at15/faiss-s3/ci-base:latest
+# Frequency: Weekly or when deps change
+# Build time: ~15-20 minutes
+
+FROM ubuntu:24.04 AS builder
+
+ENV SKIP_APT_INSTALL=1
+
+# Install build dependencies
+COPY ci/install-build-deps.sh /tmp/
+RUN /tmp/install-build-deps.sh
+
+WORKDIR /build
+
+# Build AWS SDK C++
+COPY deps/build-s3-sdk.sh deps/build-s3-sdk.sh
+RUN cd deps && ./build-s3-sdk.sh
+
+# Build FAISS
+COPY deps/build-faiss.sh deps/build-faiss.sh
+RUN cd deps && ./build-faiss.sh
+
+# Result: /build/deps/aws-sdk-cpp-home/ and /build/deps/faiss-home/
