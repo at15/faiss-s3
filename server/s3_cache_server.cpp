@@ -264,6 +264,15 @@ public:
       return false;
     }
 
+    // Validate array size to prevent OOM attacks
+    // Max 100MB for a single array (should be enough for high-dim vectors)
+    const uint32_t MAX_ARRAY_SIZE = 100 * 1024 * 1024;
+    if (length > MAX_ARRAY_SIZE) {
+      std::cerr << "Array size too large: " << length << " bytes (max "
+                << MAX_ARRAY_SIZE << " bytes)" << std::endl;
+      return false;
+    }
+
     data.resize(length);
     return read_exact(socket, data.data(), length);
   }
@@ -480,6 +489,30 @@ private:
           s3_client, bucket, key, cluster_data_offset, ivf_index->nlist,
           ivf_index->code_size, placeholder->cluster_sizes);
 
+      // Configure cache size from environment variable
+      const char *cache_size_env = std::getenv("FAISS_S3_CACHE_SIZE_MB");
+      size_t cache_size_mb = 2048; // Default: 2GB
+      if (cache_size_env) {
+        try {
+          cache_size_mb = std::stoull(cache_size_env);
+          std::cout << "[Server] Using cache size from env: " << cache_size_mb
+                    << " MB" << std::endl;
+        } catch (...) {
+          std::cerr << "[Server] Invalid FAISS_S3_CACHE_SIZE_MB value, using "
+                       "default: "
+                    << cache_size_mb << " MB" << std::endl;
+        }
+      } else {
+        std::cout << "[Server] Using default cache size: " << cache_size_mb
+                  << " MB (set FAISS_S3_CACHE_SIZE_MB to override)"
+                  << std::endl;
+      }
+
+      // Set cache limit (0 = unlimited)
+      if (cache_size_mb > 0) {
+        s3_invlists->set_max_cache_bytes(cache_size_mb * 1024 * 1024);
+      }
+
       // Replace inverted lists
       ivf_index->replace_invlists(s3_invlists, true); // owns=true
 
@@ -685,6 +718,12 @@ private:
           std::to_string(index_state->s3_invlists->cache_misses());
       response["cached_clusters"] =
           std::to_string(index_state->s3_invlists->cache_size());
+      response["cache_bytes"] =
+          std::to_string(index_state->s3_invlists->cache_bytes());
+      response["cache_mb"] = std::to_string(
+          index_state->s3_invlists->cache_bytes() / 1024 / 1024);
+      response["max_cache_mb"] = std::to_string(
+          index_state->s3_invlists->get_max_cache_bytes() / 1024 / 1024);
       response["nprobe"] = std::to_string(ivf->nprobe);
 
       send_response(ProtocolParser::format_response(response));
