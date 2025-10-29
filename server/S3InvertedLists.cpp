@@ -6,60 +6,11 @@
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/invlists/InvertedListsIOHook.h>
 
-#include <aws/core/Aws.h>
-#include <aws/core/utils/StringUtils.h>
-#include <aws/s3-crt/S3CrtClient.h>
-#include <aws/s3-crt/S3CrtClientConfiguration.h>
-#include <aws/s3-crt/model/GetObjectRequest.h>
-
 #include "S3InvertedLists.h"
+#include "constants.h"
+#include "s3_utils.h"
 
 namespace faiss_s3 {
-
-// Helper function to download byte range from S3
-static std::vector<uint8_t>
-DownloadRangeFromS3(std::shared_ptr<void> client_ptr, const std::string &bucket,
-                    const std::string &key, size_t offset, size_t size) {
-  // Cast opaque pointer to actual S3 client type
-  auto client = std::static_pointer_cast<Aws::S3Crt::S3CrtClient>(client_ptr);
-
-  Aws::S3Crt::Model::GetObjectRequest request;
-  request.SetBucket(bucket);
-  request.SetKey(key);
-
-  // S3 range format: "bytes=start-end" (inclusive on both ends)
-  // Use Aws::String and Aws::Utils::StringUtils::to_string like test_s3.cpp
-  // does
-  Aws::String range = "bytes=" + Aws::Utils::StringUtils::to_string(offset) +
-                      "-" +
-                      Aws::Utils::StringUtils::to_string(offset + size - 1);
-  request.SetRange(range);
-
-  auto outcome = client->GetObject(request);
-
-  if (outcome.IsSuccess()) {
-    std::cout << "Downloaded range from S3: " << bucket << "/" << key << " ["
-              << offset << ":" << offset + size - 1 << "]" << std::endl;
-    auto &stream = outcome.GetResultWithOwnership().GetBody();
-    std::vector<uint8_t> data(size);
-    stream.read(reinterpret_cast<char *>(data.data()), size);
-
-    size_t bytes_read = stream.gcount();
-    if (bytes_read != size) {
-      std::cerr << "Warning: Expected " << size << " bytes, got " << bytes_read
-                << std::endl;
-    }
-
-    return data;
-  } else {
-    std::cerr << "Failed to download range from S3: " << bucket << "/" << key
-              << " [" << offset << ":" << offset + size - 1
-              << "]: " << outcome.GetError().GetMessage() << std::endl;
-    FAISS_THROW_FMT("Failed to download range from s3://%s/%s [%zu:%zu]: %s",
-                    bucket.c_str(), key.c_str(), offset, offset + size,
-                    outcome.GetError().GetMessage().c_str());
-  }
-}
 
 // Type alias for Faiss index type to avoid polluting namespace
 using idx_t = faiss::idx_t;
@@ -179,11 +130,11 @@ size_t S3OnDemandInvertedLists::cache_bytes() const {
 void S3OnDemandInvertedLists::set_max_cache_bytes(size_t max_bytes) {
   std::lock_guard<std::mutex> lock(cache_mutex_);
   max_cache_bytes_ = max_bytes;
-  std::cout << "[Cache] Set max cache size to " << (max_bytes / 1024 / 1024)
+  std::cout << "[Cache] Set max cache size to " << (max_bytes / BYTES_PER_MB)
             << " MB" << std::endl;
 
   // Trigger eviction if we're over the limit
-  if (max_bytes > 0) {
+  if (max_bytes > UNLIMITED_CACHE) {
     evict_lru_if_needed(0);
   }
 }
@@ -194,7 +145,7 @@ size_t S3OnDemandInvertedLists::get_max_cache_bytes() const {
 
 void S3OnDemandInvertedLists::evict_lru_if_needed(size_t bytes_needed) const {
   // If no limit, nothing to evict
-  if (max_cache_bytes_ == 0) {
+  if (max_cache_bytes_ == UNLIMITED_CACHE) {
     return;
   }
 
@@ -214,8 +165,8 @@ void S3OnDemandInvertedLists::evict_lru_if_needed(size_t bytes_needed) const {
       cache_.erase(cache_it);
 
       std::cout << "[Cache] Evicted cluster " << evict_list_no << " ("
-                << (evicted_bytes / 1024) << " KB), cache now "
-                << (cache_bytes_ / 1024 / 1024) << " MB" << std::endl;
+                << (evicted_bytes / BYTES_PER_KB) << " KB), cache now "
+                << (cache_bytes_ / BYTES_PER_MB) << " MB" << std::endl;
     }
   }
 }
@@ -316,7 +267,7 @@ S3OnDemandInvertedLists::fetch_cluster(size_t list_no) const {
     evict_lru_if_needed(total_bytes);
 
     std::cout << "✓ Cached cluster " << list_no
-              << " (cache: " << (cache_bytes_ / 1024 / 1024) << " MB)"
+              << " (cache: " << (cache_bytes_ / BYTES_PER_MB) << " MB)"
               << std::endl;
 
     // Cache the data and track in LRU
