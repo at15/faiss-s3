@@ -96,7 +96,7 @@ private:
   mutable size_t cache_bytes_ = 0;
 
   // Cache limits and LRU tracking
-  size_t max_cache_bytes_ = 0; // 0 = unlimited
+  size_t max_cache_bytes_ = 0;         // 0 = unlimited
   mutable std::list<size_t> lru_list_; // Front = most recently used
   mutable std::unordered_map<size_t, std::list<size_t>::iterator> lru_map_;
 

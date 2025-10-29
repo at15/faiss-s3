@@ -3,7 +3,8 @@
 config:
 	./config.sh
 
-build: format
+# Do not run format since ubuntu does not have clang-format by default
+build:
 	cmake --build build
 
 format:

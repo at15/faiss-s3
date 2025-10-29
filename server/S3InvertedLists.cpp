@@ -199,8 +199,7 @@ void S3OnDemandInvertedLists::evict_lru_if_needed(size_t bytes_needed) const {
   }
 
   // Evict least recently used items until we have enough space
-  while (!lru_list_.empty() &&
-         cache_bytes_ + bytes_needed > max_cache_bytes_) {
+  while (!lru_list_.empty() && cache_bytes_ + bytes_needed > max_cache_bytes_) {
     // Get least recently used cluster (back of list)
     size_t evict_list_no = lru_list_.back();
     lru_list_.pop_back();
@@ -316,8 +315,9 @@ S3OnDemandInvertedLists::fetch_cluster(size_t list_no) const {
     // Evict LRU items if needed to make space
     evict_lru_if_needed(total_bytes);
 
-    std::cout << "✓ Cached cluster " << list_no << " (cache: "
-              << (cache_bytes_ / 1024 / 1024) << " MB)" << std::endl;
+    std::cout << "✓ Cached cluster " << list_no
+              << " (cache: " << (cache_bytes_ / 1024 / 1024) << " MB)"
+              << std::endl;
 
     // Cache the data and track in LRU
     cache_[list_no] = data;

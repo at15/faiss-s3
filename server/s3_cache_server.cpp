@@ -720,8 +720,8 @@ private:
           std::to_string(index_state->s3_invlists->cache_size());
       response["cache_bytes"] =
           std::to_string(index_state->s3_invlists->cache_bytes());
-      response["cache_mb"] = std::to_string(
-          index_state->s3_invlists->cache_bytes() / 1024 / 1024);
+      response["cache_mb"] =
+          std::to_string(index_state->s3_invlists->cache_bytes() / 1024 / 1024);
       response["max_cache_mb"] = std::to_string(
           index_state->s3_invlists->get_max_cache_bytes() / 1024 / 1024);
       response["nprobe"] = std::to_string(ivf->nprobe);

@@ -19,3 +19,29 @@ export AWS_ENDPOINT_URL_S3=http://localhost:9000
 # Run in foreground, listening on port 9001
 ./build/s3_cache_server
 ```
+
+Ubuntu
+
+- [ ] Build FAISS from source, conda is too old
+- `#include <signal.h>` on linux hmm
+
+```bash
+# For FAISS
+sudo apt install -y libopenblas-openmp-dev
+
+# For AWS SDK
+sudo apt install -y \
+    build-essential \
+    cmake \
+    git \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    libz-dev \
+    libbz2-dev \
+    liblz4-dev \
+    libzstd-dev \
+    libxml2-dev \
+    libuuid1 \
+    uuid-dev
+
+```
