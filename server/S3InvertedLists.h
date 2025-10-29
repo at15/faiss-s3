@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -65,6 +66,11 @@ struct S3OnDemandInvertedLists : faiss::InvertedLists {
   void clear_cache();
   size_t cache_hits() const;
   size_t cache_misses() const;
+  size_t cache_bytes() const;
+
+  // Cache configuration
+  void set_max_cache_bytes(size_t max_bytes);
+  size_t get_max_cache_bytes() const;
 
 private:
   // S3 configuration
@@ -87,10 +93,17 @@ private:
   // Cache statistics
   mutable size_t cache_hits_ = 0;
   mutable size_t cache_misses_ = 0;
+  mutable size_t cache_bytes_ = 0;
+
+  // Cache limits and LRU tracking
+  size_t max_cache_bytes_ = 0; // 0 = unlimited
+  mutable std::list<size_t> lru_list_; // Front = most recently used
+  mutable std::unordered_map<size_t, std::list<size_t>::iterator> lru_map_;
 
   // Helper methods
   std::shared_ptr<ClusterData> fetch_cluster(size_t list_no) const;
   size_t calculate_cluster_offset(size_t list_no) const;
+  void evict_lru_if_needed(size_t bytes_needed) const;
 };
 
 // IO flag for S3 lazy loading

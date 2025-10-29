@@ -154,8 +154,11 @@ size_t S3OnDemandInvertedLists::cache_size() const {
 void S3OnDemandInvertedLists::clear_cache() {
   std::lock_guard<std::mutex> lock(cache_mutex_);
   cache_.clear();
+  lru_list_.clear();
+  lru_map_.clear();
   cache_hits_ = 0;
   cache_misses_ = 0;
+  cache_bytes_ = 0;
 }
 
 size_t S3OnDemandInvertedLists::cache_hits() const {
@@ -166,6 +169,56 @@ size_t S3OnDemandInvertedLists::cache_hits() const {
 size_t S3OnDemandInvertedLists::cache_misses() const {
   std::lock_guard<std::mutex> lock(cache_mutex_);
   return cache_misses_;
+}
+
+size_t S3OnDemandInvertedLists::cache_bytes() const {
+  std::lock_guard<std::mutex> lock(cache_mutex_);
+  return cache_bytes_;
+}
+
+void S3OnDemandInvertedLists::set_max_cache_bytes(size_t max_bytes) {
+  std::lock_guard<std::mutex> lock(cache_mutex_);
+  max_cache_bytes_ = max_bytes;
+  std::cout << "[Cache] Set max cache size to " << (max_bytes / 1024 / 1024)
+            << " MB" << std::endl;
+
+  // Trigger eviction if we're over the limit
+  if (max_bytes > 0) {
+    evict_lru_if_needed(0);
+  }
+}
+
+size_t S3OnDemandInvertedLists::get_max_cache_bytes() const {
+  return max_cache_bytes_;
+}
+
+void S3OnDemandInvertedLists::evict_lru_if_needed(size_t bytes_needed) const {
+  // If no limit, nothing to evict
+  if (max_cache_bytes_ == 0) {
+    return;
+  }
+
+  // Evict least recently used items until we have enough space
+  while (!lru_list_.empty() &&
+         cache_bytes_ + bytes_needed > max_cache_bytes_) {
+    // Get least recently used cluster (back of list)
+    size_t evict_list_no = lru_list_.back();
+    lru_list_.pop_back();
+    lru_map_.erase(evict_list_no);
+
+    // Remove from cache and update byte count
+    auto cache_it = cache_.find(evict_list_no);
+    if (cache_it != cache_.end()) {
+      size_t evicted_bytes = cache_it->second->codes.size() +
+                             cache_it->second->ids.size() * sizeof(idx_t);
+      cache_bytes_ -= evicted_bytes;
+      cache_.erase(cache_it);
+
+      std::cout << "[Cache] Evicted cluster " << evict_list_no << " ("
+                << (evicted_bytes / 1024) << " KB), cache now "
+                << (cache_bytes_ / 1024 / 1024) << " MB" << std::endl;
+    }
+  }
 }
 
 size_t S3OnDemandInvertedLists::calculate_cluster_offset(size_t list_no) const {
@@ -185,23 +238,45 @@ size_t S3OnDemandInvertedLists::calculate_cluster_offset(size_t list_no) const {
 
 std::shared_ptr<S3OnDemandInvertedLists::ClusterData>
 S3OnDemandInvertedLists::fetch_cluster(size_t list_no) const {
-  std::lock_guard<std::mutex> lock(cache_mutex_);
+  // First check: with lock held
+  {
+    std::lock_guard<std::mutex> lock(cache_mutex_);
 
-  // Check if already cached
-  auto it = cache_.find(list_no);
-  if (it != cache_.end()) {
-    cache_hits_++;
-    return it->second;
+    // Check if already cached
+    auto it = cache_.find(list_no);
+    if (it != cache_.end()) {
+      cache_hits_++;
+
+      // Move to front of LRU list (most recently used)
+      auto lru_it = lru_map_.find(list_no);
+      if (lru_it != lru_map_.end()) {
+        lru_list_.erase(lru_it->second);
+        lru_list_.push_front(list_no);
+        lru_map_[list_no] = lru_list_.begin();
+      }
+
+      return it->second;
+    }
+
+    // Record cache miss
+    cache_misses_++;
   }
 
-  // Cache miss - fetch from S3
-  cache_misses_++;
+  // Cache miss - prepare to fetch from S3 (without holding lock)
   size_t n = cluster_sizes_[list_no];
   auto data = std::make_shared<ClusterData>();
 
   if (n == 0) {
-    // Empty cluster
+    // Empty cluster - cache it and return
+    std::lock_guard<std::mutex> lock(cache_mutex_);
+    // Double-check in case another thread cached it
+    auto it = cache_.find(list_no);
+    if (it != cache_.end()) {
+      return it->second;
+    }
     cache_[list_no] = data;
+    lru_list_.push_front(list_no);
+    lru_map_[list_no] = lru_list_.begin();
     return data;
   }
 
@@ -213,7 +288,8 @@ S3OnDemandInvertedLists::fetch_cluster(size_t list_no) const {
   std::cout << "→ Fetching cluster " << list_no << " (" << n << " vectors, "
             << total_bytes << " bytes)" << std::endl;
 
-  // Download cluster data from S3
+  // Download cluster data from S3 WITHOUT holding the mutex
+  // This allows other threads to access the cache while we're downloading
   auto raw_data =
       DownloadRangeFromS3(s3_client_, s3_bucket_, s3_key_, offset, total_bytes);
 
@@ -224,11 +300,33 @@ S3OnDemandInvertedLists::fetch_cluster(size_t list_no) const {
   memcpy(data->codes.data(), raw_data.data(), codes_bytes);
   memcpy(data->ids.data(), raw_data.data() + codes_bytes, ids_bytes);
 
-  std::cout << "✓ Cached cluster " << list_no << std::endl;
+  // Now acquire lock to update cache
+  {
+    std::lock_guard<std::mutex> lock(cache_mutex_);
 
-  // Cache the data
-  cache_[list_no] = data;
-  return data;
+    // Double-check: another thread might have fetched this while we were
+    // downloading
+    auto it = cache_.find(list_no);
+    if (it != cache_.end()) {
+      std::cout << "✓ Cluster " << list_no
+                << " was cached by another thread, using that" << std::endl;
+      return it->second;
+    }
+
+    // Evict LRU items if needed to make space
+    evict_lru_if_needed(total_bytes);
+
+    std::cout << "✓ Cached cluster " << list_no << " (cache: "
+              << (cache_bytes_ / 1024 / 1024) << " MB)" << std::endl;
+
+    // Cache the data and track in LRU
+    cache_[list_no] = data;
+    cache_bytes_ += total_bytes;
+    lru_list_.push_front(list_no);
+    lru_map_[list_no] = lru_list_.begin();
+
+    return data;
+  }
 }
 
 // ============================================================================
