@@ -5,7 +5,7 @@
 ```bash
 # TODO: Add how to build faiss from source (at least on mac...), also need openmp
 
-cd deps && ./build-s3-sdk.sh
+./deps/build-s3-sdk.sh
 make config
 make build
 

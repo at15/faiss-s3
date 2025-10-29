@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Change to the directory where this script is located
+cd "$(dirname "$0")"
+
 mkdir aws-sdk-cpp-home
 AWS_SDK_INSTALL_DIR="$(realpath aws-sdk-cpp-home)"
 

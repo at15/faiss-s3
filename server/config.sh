@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Change to the directory where this script is located
+cd "$(dirname "$0")"
+
 AWS_SDK_INSTALL_DIR="$(realpath deps/aws-sdk-cpp-home)"
 
 # TODO: this only works on mac with openmp
