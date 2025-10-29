@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "faiss-s3"
+version = "0.0.1"
+description = "Python client for searching Faiss index stored on S3 (https://github.com/at15/faiss-s3)"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+# NOTE: to install the dependencies
+# Run pip install -e . in current folder
+dependencies = [
+    "boto3",
+    "faiss-cpu",
+]
