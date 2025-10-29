@@ -85,7 +85,7 @@ public:
     }
 
     // Listen for connections
-    if (listen(server_socket_, LISTEN_BACKLOG) < 0) {
+    if (listen(server_socket_, kListenBacklog) < 0) {
       std::cerr << "[Server] Failed to listen on port " << port_ << std::endl;
       close(server_socket_);
       return false;

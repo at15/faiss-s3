@@ -71,12 +71,12 @@ size_t S3OnDemandInvertedLists::list_size(size_t list_no) const {
 }
 
 const uint8_t *S3OnDemandInvertedLists::get_codes(size_t list_no) const {
-  auto data = fetch_cluster(list_no);
+  auto data = FetchCluster(list_no);
   return data->codes.data();
 }
 
 const idx_t *S3OnDemandInvertedLists::get_ids(size_t list_no) const {
-  auto data = fetch_cluster(list_no);
+  auto data = FetchCluster(list_no);
   return data->ids.data();
 }
 
@@ -97,12 +97,12 @@ void S3OnDemandInvertedLists::resize(size_t list_no, size_t new_size) {
   FAISS_THROW_MSG("S3OnDemandInvertedLists: read-only");
 }
 
-size_t S3OnDemandInvertedLists::cache_size() const {
+size_t S3OnDemandInvertedLists::CacheSize() const {
   std::lock_guard<std::mutex> lock(cache_mutex_);
   return cache_.size();
 }
 
-void S3OnDemandInvertedLists::clear_cache() {
+void S3OnDemandInvertedLists::ClearCache() {
   std::lock_guard<std::mutex> lock(cache_mutex_);
   cache_.clear();
   lru_list_.clear();
@@ -112,40 +112,40 @@ void S3OnDemandInvertedLists::clear_cache() {
   cache_bytes_ = 0;
 }
 
-size_t S3OnDemandInvertedLists::cache_hits() const {
+size_t S3OnDemandInvertedLists::CacheHits() const {
   std::lock_guard<std::mutex> lock(cache_mutex_);
   return cache_hits_;
 }
 
-size_t S3OnDemandInvertedLists::cache_misses() const {
+size_t S3OnDemandInvertedLists::CacheMisses() const {
   std::lock_guard<std::mutex> lock(cache_mutex_);
   return cache_misses_;
 }
 
-size_t S3OnDemandInvertedLists::cache_bytes() const {
+size_t S3OnDemandInvertedLists::CacheBytes() const {
   std::lock_guard<std::mutex> lock(cache_mutex_);
   return cache_bytes_;
 }
 
-void S3OnDemandInvertedLists::set_max_cache_bytes(size_t max_bytes) {
+void S3OnDemandInvertedLists::SetMaxCacheBytes(size_t max_bytes) {
   std::lock_guard<std::mutex> lock(cache_mutex_);
   max_cache_bytes_ = max_bytes;
-  std::cout << "[Cache] Set max cache size to " << (max_bytes / BYTES_PER_MB)
+  std::cout << "[Cache] Set max cache size to " << (max_bytes / kBytesPerMB)
             << " MB" << std::endl;
 
   // Trigger eviction if we're over the limit
-  if (max_bytes > UNLIMITED_CACHE) {
-    evict_lru_if_needed(0);
+  if (max_bytes > kUnlimitedCache) {
+    EvictLRUIfNeeded(0);
   }
 }
 
-size_t S3OnDemandInvertedLists::get_max_cache_bytes() const {
+size_t S3OnDemandInvertedLists::GetMaxCacheBytes() const {
   return max_cache_bytes_;
 }
 
-void S3OnDemandInvertedLists::evict_lru_if_needed(size_t bytes_needed) const {
+void S3OnDemandInvertedLists::EvictLRUIfNeeded(size_t bytes_needed) const {
   // If no limit, nothing to evict
-  if (max_cache_bytes_ == UNLIMITED_CACHE) {
+  if (max_cache_bytes_ == kUnlimitedCache) {
     return;
   }
 
@@ -165,13 +165,13 @@ void S3OnDemandInvertedLists::evict_lru_if_needed(size_t bytes_needed) const {
       cache_.erase(cache_it);
 
       std::cout << "[Cache] Evicted cluster " << evict_list_no << " ("
-                << (evicted_bytes / BYTES_PER_KB) << " KB), cache now "
-                << (cache_bytes_ / BYTES_PER_MB) << " MB" << std::endl;
+                << (evicted_bytes / kBytesPerKB) << " KB), cache now "
+                << (cache_bytes_ / kBytesPerMB) << " MB" << std::endl;
     }
   }
 }
 
-size_t S3OnDemandInvertedLists::calculate_cluster_offset(size_t list_no) const {
+size_t S3OnDemandInvertedLists::CalculateClusterOffset(size_t list_no) const {
   size_t offset = cluster_data_offset_;
 
   // Sum up all previous clusters' sizes
@@ -187,7 +187,7 @@ size_t S3OnDemandInvertedLists::calculate_cluster_offset(size_t list_no) const {
 }
 
 std::shared_ptr<S3OnDemandInvertedLists::ClusterData>
-S3OnDemandInvertedLists::fetch_cluster(size_t list_no) const {
+S3OnDemandInvertedLists::FetchCluster(size_t list_no) const {
   // First check: with lock held
   {
     std::lock_guard<std::mutex> lock(cache_mutex_);
@@ -230,7 +230,7 @@ S3OnDemandInvertedLists::fetch_cluster(size_t list_no) const {
     return data;
   }
 
-  size_t offset = calculate_cluster_offset(list_no);
+  size_t offset = CalculateClusterOffset(list_no);
   size_t codes_bytes = n * code_size;
   size_t ids_bytes = n * sizeof(idx_t);
   size_t total_bytes = codes_bytes + ids_bytes;
@@ -264,10 +264,10 @@ S3OnDemandInvertedLists::fetch_cluster(size_t list_no) const {
     }
 
     // Evict LRU items if needed to make space
-    evict_lru_if_needed(total_bytes);
+    EvictLRUIfNeeded(total_bytes);
 
     std::cout << "✓ Cached cluster " << list_no
-              << " (cache: " << (cache_bytes_ / BYTES_PER_MB) << " MB)"
+              << " (cache: " << (cache_bytes_ / kBytesPerMB) << " MB)"
               << std::endl;
 
     // Cache the data and track in LRU

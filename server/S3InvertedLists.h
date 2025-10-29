@@ -61,16 +61,16 @@ struct S3OnDemandInvertedLists : faiss::InvertedLists {
 
   void resize(size_t list_no, size_t new_size) override;
 
-  // Cache statistics
-  size_t cache_size() const;
-  void clear_cache();
-  size_t cache_hits() const;
-  size_t cache_misses() const;
-  size_t cache_bytes() const;
+  // Cache statistics (custom methods use PascalCase per Google style)
+  size_t CacheSize() const;
+  void ClearCache();
+  size_t CacheHits() const;
+  size_t CacheMisses() const;
+  size_t CacheBytes() const;
 
-  // Cache configuration
-  void set_max_cache_bytes(size_t max_bytes);
-  size_t get_max_cache_bytes() const;
+  // Cache configuration (custom methods use PascalCase per Google style)
+  void SetMaxCacheBytes(size_t max_bytes);
+  size_t GetMaxCacheBytes() const;
 
 private:
   // S3 configuration
@@ -100,10 +100,10 @@ private:
   mutable std::list<size_t> lru_list_; // Front = most recently used
   mutable std::unordered_map<size_t, std::list<size_t>::iterator> lru_map_;
 
-  // Helper methods
-  std::shared_ptr<ClusterData> fetch_cluster(size_t list_no) const;
-  size_t calculate_cluster_offset(size_t list_no) const;
-  void evict_lru_if_needed(size_t bytes_needed) const;
+  // Helper methods (use PascalCase per Google style)
+  std::shared_ptr<ClusterData> FetchCluster(size_t list_no) const;
+  size_t CalculateClusterOffset(size_t list_no) const;
+  void EvictLRUIfNeeded(size_t bytes_needed) const;
 };
 
 // IO flag for S3 lazy loading
