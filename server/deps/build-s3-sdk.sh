@@ -18,21 +18,31 @@ case "$OS" in
     ;;
 
   Linux*)
-    echo "Detected Linux, installing dependencies..."
-    sudo apt-get update
-    sudo apt-get install -y \
-      build-essential \
-      cmake \
-      git \
-      libssl-dev \
-      libcurl4-openssl-dev \
-      libz-dev \
-      libbz2-dev \
-      liblz4-dev \
-      libzstd-dev \
-      libxml2-dev \
-      libuuid1 \
-      uuid-dev
+    if [ -z "$SKIP_APT_INSTALL" ]; then
+      echo "Detected Linux, installing dependencies..."
+      # Use sudo only if not running as root
+      if [ "$(id -u)" -eq 0 ]; then
+        APT_GET="apt-get"
+      else
+        APT_GET="sudo apt-get"
+      fi
+      $APT_GET update
+      $APT_GET install -y \
+        build-essential \
+        cmake \
+        git \
+        libssl-dev \
+        libcurl4-openssl-dev \
+        libz-dev \
+        libbz2-dev \
+        liblz4-dev \
+        libzstd-dev \
+        libxml2-dev \
+        libuuid1 \
+        uuid-dev
+    else
+      echo "Detected Linux (skipping apt install, packages already installed)"
+    fi
     ;;
 
   *)

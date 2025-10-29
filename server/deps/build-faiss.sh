@@ -33,10 +33,20 @@ case "$OS" in
     ;;
 
   Linux*)
-    echo "Detected Linux, using apt..."
-    sudo apt-get update
-    # https://github.com/facebookresearch/faiss/wiki/Troubleshooting#surprising-faiss-openmp-and-openblas-interaction
-    sudo apt-get install -y libopenblas-openmp-dev
+    if [ -z "$SKIP_APT_INSTALL" ]; then
+      echo "Detected Linux, installing dependencies..."
+      # Use sudo only if not running as root
+      if [ "$(id -u)" -eq 0 ]; then
+        APT_GET="apt-get"
+      else
+        APT_GET="sudo apt-get"
+      fi
+      $APT_GET update
+      # https://github.com/facebookresearch/faiss/wiki/Troubleshooting#surprising-faiss-openmp-and-openblas-interaction
+      $APT_GET install -y libopenblas-openmp-dev
+    else
+      echo "Detected Linux (skipping apt install, packages already installed)"
+    fi
 
     # Configure with standard Linux settings
     cmake -B build \

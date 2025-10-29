@@ -22,14 +22,8 @@ export AWS_ENDPOINT_URL_S3=http://localhost:9000
 
 Ubuntu
 
-- [ ] Build FAISS from source, conda is too old
-- `#include <signal.h>` on linux hmm
-
 ```bash
-# For FAISS
-sudo apt install -y libopenblas-openmp-dev
-
-# For AWS SDK
+# Build dependencies
 sudo apt install -y \
     build-essential \
     cmake \
@@ -42,6 +36,8 @@ sudo apt install -y \
     libzstd-dev \
     libxml2-dev \
     libuuid1 \
-    uuid-dev
+    uuid-dev \
+    libopenblas-openmp-dev
 
+# Note: libopenblas-openmp-dev provides OpenMP support for FAISS
 ```
