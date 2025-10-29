@@ -18,7 +18,7 @@ source .venv/bin/activate
 # Brings in boto3 and faiss-cpu
 pip install -e ./client
 # Generate embeddings
-pip install sentence-transformers
+pip install sentence-transformers pandas
 ```
 
 ## License
