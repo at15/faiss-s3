@@ -232,12 +232,13 @@ private:
       faiss::VectorIOReader reader;
       reader.data = std::move(metadata_bytes);
 
-      faiss::Index *raw_index = faiss::read_index(&reader, IO_FLAG_S3);
+      // Use unique_ptr for RAII - prevents leaks if exceptions thrown
+      std::unique_ptr<faiss::Index> index(
+          faiss::read_index(&reader, IO_FLAG_S3));
 
       // Cast to IVF index
-      auto *ivf_index = dynamic_cast<faiss::IndexIVFFlat *>(raw_index);
+      auto *ivf_index = dynamic_cast<faiss::IndexIVFFlat *>(index.get());
       if (!ivf_index) {
-        delete raw_index;
         SendError("LOAD_FAILED", "Index is not IndexIVFFlat type");
         return;
       }
@@ -252,15 +253,16 @@ private:
           dynamic_cast<S3ReadNothingInvertedLists *>(ivf_index->invlists);
 
       if (!placeholder) {
-        delete raw_index;
         SendError("LOAD_FAILED", "Invalid inverted lists type");
         return;
       }
 
       // Create S3OnDemandInvertedLists to replace placeholder
-      auto *s3_invlists = new S3OnDemandInvertedLists(
-          s3_client, bucket, key, cluster_data_offset, ivf_index->nlist,
-          ivf_index->code_size, placeholder->cluster_sizes);
+      // Use unique_ptr for RAII - prevents leak if SetMaxCacheBytes throws
+      std::unique_ptr<S3OnDemandInvertedLists> s3_invlists(
+          new S3OnDemandInvertedLists(
+              s3_client, bucket, key, cluster_data_offset, ivf_index->nlist,
+              ivf_index->code_size, placeholder->cluster_sizes));
 
       // Configure cache size from environment variable
       const char *cache_size_env = std::getenv(kEnvCacheSizeMB);
@@ -287,12 +289,15 @@ private:
       }
 
       // Replace placeholder with on-demand inverted lists
-      ivf_index->replace_invlists(s3_invlists, true); // owns=true
+      // Save raw pointer before transferring ownership (needed for AddIndex)
+      S3OnDemandInvertedLists *s3_invlists_ptr = s3_invlists.get();
+      // Transfer ownership to Faiss (owns=true), release from unique_ptr
+      ivf_index->replace_invlists(s3_invlists.release(), true);
 
-      // Store in server state
-      std::shared_ptr<faiss::Index> index_ptr(raw_index);
+      // Store in server state (transfer ownership to shared_ptr)
+      std::shared_ptr<faiss::Index> index_ptr(index.release());
       int index_id = server_state_->AddIndex(
-          bucket, key, cluster_data_offset, index_ptr, s3_client, s3_invlists);
+          bucket, key, cluster_data_offset, index_ptr, s3_client, s3_invlists_ptr);
 
       std::cout << "[Client " << socket_fd_
                 << "] Index loaded with ID=" << index_id << std::endl;

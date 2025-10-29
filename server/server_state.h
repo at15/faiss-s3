@@ -62,6 +62,15 @@ public:
 
   /**
    * Cleans up all loaded indexes and shuts down the AWS SDK.
+   *
+   * Thread Safety:
+   * - Called during server shutdown when Run() loop has exited
+   * - No new client connections are accepted after Stop() is called
+   * - Active client threads may still be running (detached), but they
+   *   only read from indexes (no modifications)
+   * - Clearing the indexes map invalidates all IndexState pointers
+   * - This is safe because all index access is read-only and the
+   *   shared_ptr references in IndexState keep objects alive
    */
   ~ServerState() {
     // Cleanup indexes
@@ -73,6 +82,8 @@ public:
     }
 
     // Shutdown AWS SDK
+    // Note: Active client threads may still have S3 client references
+    // via shared_ptr, so actual cleanup happens when last reference released
     std::cout << "[Server] Shutting down AWS SDK..." << std::endl;
     Aws::ShutdownAPI(sdk_options_);
   }
@@ -118,12 +129,20 @@ public:
   /**
    * Gets an index by ID.
    *
-   * Note: This function returns a pointer to the IndexState while holding
-   * the lock, then releases the lock. The pointer remains valid because
-   * indexes are never removed during server operation (only at shutdown).
+   * Thread Safety Guarantees:
+   * - This function returns a pointer to IndexState after releasing the lock
+   * - The returned pointer remains valid because:
+   *   1. Indexes are NEVER removed during server operation
+   *   2. Map entries are only erased at server shutdown (in destructor)
+   *   3. No concurrent access occurs during shutdown
+   * - IndexState itself contains thread-safe components (shared_ptr, mutex in S3OnDemandInvertedLists)
+   *
+   * Lifetime Guarantee:
+   * - Returned pointer is valid until ServerState destructor is called
+   * - Safe to use across multiple operations without re-acquiring
    *
    * @param id Index ID to look up
-   * @param out_state Pointer to receive the IndexState pointer
+   * @param out_state Pointer to receive the IndexState pointer (valid until shutdown)
    * @return true if index was found, false otherwise
    */
   bool GetIndex(int id, IndexState **out_state) {

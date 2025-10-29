@@ -8,7 +8,6 @@
 #include <atomic>
 #include <iostream>
 #include <thread>
-#include <vector>
 
 #include "client_handler.h"
 #include "constants.h"
@@ -100,11 +99,13 @@ public:
    * Main server loop: accepts connections and spawns handler threads.
    *
    * This function blocks until Stop() is called or an error occurs.
-   * Each accepted connection spawns a new thread running a ClientHandler.
+   * Each accepted connection spawns a new detached thread running a ClientHandler.
    *
-   * Note: Client threads are accumulated in a vector and never cleaned up
-   * until server shutdown. For production use, consider using a thread pool
-   * or detaching threads.
+   * Threads are detached for automatic cleanup when client disconnects.
+   * ClientHandler destructor ensures proper resource cleanup (socket closure).
+   *
+   * Note: For high-concurrency production use, consider using a thread pool
+   * to limit the number of concurrent connections.
    */
   void Run() {
     while (running_) {
@@ -122,23 +123,27 @@ public:
         continue; // Server was stopped, accept() was interrupted
       }
 
-      // Spawn thread for client
-      // Note: Each client gets its own thread. Consider using a thread pool
-      // for better resource management in production.
-      client_threads_.emplace_back([this, client_socket]() {
+      // Spawn detached thread for client
+      // Detached threads clean up automatically when client handler finishes
+      // ClientHandler destructor closes socket, ensuring no resource leaks
+      std::thread client_thread([this, client_socket]() {
         ClientHandler handler(client_socket, &server_state_);
         handler.Run();
       });
+      client_thread.detach();
     }
   }
 
   /**
-   * Stops the server and waits for all client threads to finish.
+   * Stops the server gracefully.
    *
    * This method:
    * 1. Sets the running flag to false
    * 2. Closes the listening socket (interrupts accept())
-   * 3. Waits for all client handler threads to complete
+   *
+   * Client threads are detached and will finish independently.
+   * Active client connections continue until they disconnect naturally.
+   * ClientHandler destructors ensure proper cleanup of resources.
    *
    * This is safe to call multiple times.
    */
@@ -155,18 +160,8 @@ public:
       server_socket_ = -1;
     }
 
-    // Wait for all client threads to finish
-    // Note: This can take a while if clients are still connected
-    std::cout << "[Server] Waiting for " << client_threads_.size()
-              << " client threads to finish..." << std::endl;
-
-    for (auto &thread : client_threads_) {
-      if (thread.joinable()) {
-        thread.join();
-      }
-    }
-
-    std::cout << "[Server] Stopped" << std::endl;
+    std::cout << "[Server] Stopped (active client connections will finish independently)"
+              << std::endl;
   }
 
   /**
@@ -181,7 +176,7 @@ private:
   int port_;
   std::atomic<bool> running_;
   ServerState server_state_;
-  std::vector<std::thread> client_threads_;
+  // Note: Client threads are detached, not tracked
 };
 
 } // namespace faiss_s3
