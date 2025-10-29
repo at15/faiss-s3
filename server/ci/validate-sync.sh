@@ -4,7 +4,11 @@
 
 set -e
 
+# Change to the directory where this script is located, then to parent (server/)
+cd "$(dirname "$0")/.."
+
 echo "Validating Docker dependency consistency..."
+echo "Working directory: $(pwd)"
 
 # Check that install-build-deps.sh is used by Dockerfile
 if ! grep -q "install-build-deps.sh" Dockerfile; then
