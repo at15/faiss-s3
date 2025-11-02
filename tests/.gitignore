@@ -1,3 +1,5 @@
 *.tsv
 *.pt
 *.idx
+e2e_test_*
+creds.sh

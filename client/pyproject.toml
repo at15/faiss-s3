@@ -14,3 +14,10 @@ dependencies = [
     "boto3",
     "faiss-cpu",
 ]
+
+[project.optional-dependencies]
+test = [
+    "sentence-transformers",
+    "pandas",
+    "pyarrow",
+]

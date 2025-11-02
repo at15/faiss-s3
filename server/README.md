@@ -9,7 +9,9 @@
 make config
 make build
 
-# Start s3mock server
+# Set S3 credentials
+source creds.sh
+# Or set environment variables manually
 export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
 export AWS_REGION=us-east-1

@@ -73,3 +73,9 @@ For example
     }
 }
 ```
+
+## Instructiosn for Claude Code on version 1
+
+Base on the background section and existing scripts in `tests` folder.
+Write the plan for the new full e2e test in `docs/tasks/001-e2e-test.claude.md`.
+Then implement the new e2e test usign the quora dataset.

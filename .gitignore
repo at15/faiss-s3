@@ -44,3 +44,9 @@
 # Python
 .venv
 __pycache__
+
+# Test artifacts
+e2e_test_*
+e2e_cache/
+
+creds.sh

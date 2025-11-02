@@ -3,7 +3,7 @@ botocore==1.40.61
 certifi==2025.10.5
 charset-normalizer==3.4.4
 faiss-cpu==1.12.0
--e git+ssh://git@github.com/at15/faiss-s3.git@3e560ec9c107417124febafc4fb842c387feb940#egg=faiss_s3&subdirectory=client
+-e git+ssh://git@github.com/at15/faiss-s3.git@b9b711434303b649e56c13db95bb3278021c1f8d#egg=faiss_s3&subdirectory=client
 filelock==3.20.0
 fsspec==2025.9.0
 hf-xet==1.2.0
@@ -19,6 +19,7 @@ numpy==2.3.4
 packaging==25.0
 pandas==2.3.3
 pillow==12.0.0
+pyarrow==22.0.0
 python-dateutil==2.9.0.post0
 pytz==2025.2
 PyYAML==6.0.3
