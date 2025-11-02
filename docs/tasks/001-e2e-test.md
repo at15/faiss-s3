@@ -1,3 +1,11 @@
+---
+tags:
+  - test
+  - e2e
+  - faiss
+  - search
+---
+
 # 001 E2E Test
 
 Full e2e test from raw text without hardcoded values.
