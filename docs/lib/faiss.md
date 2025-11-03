@@ -1,7 +1,23 @@
+---
+tags:
+  - lib
+  - faiss
+  - vector
+  - cpp
+---
+
 # Faiss
+
+## TODO
 
 - [ ] `IndexIVFStats` seems to be a global stats? Seems you can pass it as search parameter
 - [ ] Use `search_preassigned` or pass ID selector as parameter to the quantizer?
+
+## Usage
+
+```bash
+pip install faiss-cpu
+```
 
 ## SearchParameters
 

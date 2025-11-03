@@ -50,3 +50,5 @@ e2e_test_*
 e2e_cache/
 
 creds.sh
+
+*.parquet
