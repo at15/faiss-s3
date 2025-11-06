@@ -1,7 +1,9 @@
 # pip install polars
 import polars as pl
 
+# Test the 7GB parquet file, which only contains the meadata, url ... but no images
 # https://huggingface.co/datasets/ARKseal/YFCC14M_subset_webdataset
+# Base on https://gitlab.com/jfolz/yfcc100m the total image size is 11TB
 df = pl.read_parquet("yfcc14m.parquet")
 
 print("Columns:", df.columns)
@@ -33,8 +35,7 @@ print(tag_counts.head(20))
 # Distribution: how many tags appear X times
 print("\n=== Distribution of Images per Tag ===")
 distribution = (
-    tag_counts
-    .group_by("count")
+    tag_counts.group_by("count")
     .agg(pl.len().alias("num_tags"))
     .sort("count", descending=True)
 )
@@ -42,12 +43,23 @@ print(distribution.head(20))
 
 # Histogram-style bins for better visualization
 print("\n=== Distribution by Bins ===")
-bins = [1, 2, 5, 10, 50, 100, 500, 1000, 5000, 10000, float('inf')]
-bin_labels = ["1", "2-4", "5-9", "10-49", "50-99", "100-499", "500-999", "1000-4999", "5000-9999", "10000+"]
+bins = [1, 2, 5, 10, 50, 100, 500, 1000, 5000, 10000, float("inf")]
+bin_labels = [
+    "1",
+    "2-4",
+    "5-9",
+    "10-49",
+    "50-99",
+    "100-499",
+    "500-999",
+    "1000-4999",
+    "5000-9999",
+    "10000+",
+]
 
 for i in range(len(bins) - 1):
     count = tag_counts.filter(
-        (pl.col("count") >= bins[i]) & (pl.col("count") < bins[i+1])
+        (pl.col("count") >= bins[i]) & (pl.col("count") < bins[i + 1])
     ).shape[0]
     print(f"{bin_labels[i]:12} images: {count:8} tags")
 

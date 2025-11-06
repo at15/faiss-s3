@@ -203,9 +203,10 @@ class FullE2ETest:
 
             # Normalize embeddings for INNER_PRODUCT metric
             print("Normalizing embeddings...")
-            normalized_embeddings = self.corpus_embeddings / np.linalg.norm(
-                self.corpus_embeddings, axis=1
-            )[:, None]
+            normalized_embeddings = (
+                self.corpus_embeddings
+                / np.linalg.norm(self.corpus_embeddings, axis=1)[:, None]
+            )
 
             # Create IVF index
             print(f"Creating IVF index with {self.n_clusters} clusters...")
@@ -225,7 +226,9 @@ class FullE2ETest:
             print("Adding vectors to index...")
             self.index.add(normalized_embeddings)
 
-            print(f"Index built: {self.index.ntotal} vectors in {self.n_clusters} clusters")
+            print(
+                f"Index built: {self.index.ntotal} vectors in {self.n_clusters} clusters"
+            )
 
             # Save index
             faiss.write_index(self.index, str(self.index_path))
@@ -305,7 +308,9 @@ class FullE2ETest:
         """Phase 6: Upload all files to S3"""
         with Timer("Phase 6: Upload to S3") as t:
             # Disable multipart for S3Mock compatibility
-            config = TransferConfig(multipart_threshold=1024 * 1024 * 1024 * 100)  # 100GB
+            config = TransferConfig(
+                multipart_threshold=1024 * 1024 * 1024 * 100
+            )  # 100GB
             s3 = boto3.client("s3")
 
             files_to_upload = [
@@ -318,9 +323,7 @@ class FullE2ETest:
             for s3_key_suffix, local_path in files_to_upload:
                 s3_key = f"{self.s3_prefix}/{s3_key_suffix}"
                 print(f"Uploading {local_path.name} to s3://{self.s3_bucket}/{s3_key}")
-                s3.upload_file(
-                    str(local_path), self.s3_bucket, s3_key, Config=config
-                )
+                s3.upload_file(str(local_path), self.s3_bucket, s3_key, Config=config)
 
             print(f"All files uploaded to s3://{self.s3_bucket}/{self.s3_prefix}/")
 
@@ -401,9 +404,7 @@ class FullE2ETest:
 
             print("\nLocal FAISS Results:")
             print("-" * 80)
-            for rank, (vector_id, score) in enumerate(
-                zip(ids[0], distances[0]), 1
-            ):
+            for rank, (vector_id, score) in enumerate(zip(ids[0], distances[0]), 1):
                 text = df_attributes.loc[vector_id, "text"]
                 print(f"  {rank}. [id={vector_id}, score={score:.4f}] {text}")
 
@@ -438,7 +439,9 @@ class FullE2ETest:
 
             with S3CacheClient(host="localhost", port=9001) as client:
                 # Load index from S3
-                print(f"Loading index from S3 (bucket={self.s3_bucket}, key={self.s3_prefix}/index.ivf)")
+                print(
+                    f"Loading index from S3 (bucket={self.s3_bucket}, key={self.s3_prefix}/index.ivf)"
+                )
                 index_id = client.load(
                     self.s3_bucket,
                     f"{self.s3_prefix}/index.ivf",
@@ -463,7 +466,9 @@ class FullE2ETest:
 
                 print(f"  Global cache hits: {cache_stats['cache_hits']:,}")
                 print(f"  Global cache misses: {cache_stats['cache_misses']:,}")
-                print(f"  Index cached clusters: {index_stats['cached_clusters']}/{index_stats['cluster_count']}")
+                print(
+                    f"  Index cached clusters: {index_stats['cached_clusters']}/{index_stats['cluster_count']}"
+                )
                 print(f"  Index cache hits: {index_stats['cache_hits']:,}")
                 print(f"  Index cache misses: {index_stats['cache_misses']:,}")
 
@@ -554,9 +559,7 @@ class FullE2ETest:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Full end-to-end test for faiss-s3"
-    )
+    parser = argparse.ArgumentParser(description="Full end-to-end test for faiss-s3")
     parser.add_argument(
         "--dataset-size",
         type=int,

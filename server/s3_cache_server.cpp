@@ -42,8 +42,8 @@ faiss_s3::TCPServer *g_server = nullptr;
  * Stops the server when receiving interrupt or termination signals.
  */
 void SignalHandler(int signal) {
-  std::cout << "\n[Server] Received signal " << signal
-            << ", shutting down..." << std::endl;
+  std::cout << "\n[Server] Received signal " << signal << ", shutting down..."
+            << std::endl;
   if (g_server) {
     g_server->Stop();
   }

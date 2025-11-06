@@ -9,11 +9,16 @@ tags:
 
 Used by big ANN benchmark, baseline is using faiss. The big ANN benchmark only fiters by two tags.
 
+## Links
+
 From NIPS2023 BigANN Benchmark https://github.com/harsha-simhadri/big-ann-benchmarks/blob/main/neurips23/README.md
 
 - https://github.com/harsha-simhadri/big-ann-benchmarks/blob/main/benchmark/datasets.py
 - Detail of dataset is in the claude generated document [YFCC100M.claude.md](YFCC100M.claude.md)
-- The **Ground Truth** is calculated using filter by metadata then kNN.
+
+## Setup
+
+The **Ground Truth** is calculated using filter by metadata then kNN, run on GPU using slurm... saw `srun`.
 
 btw: I think the tags are very different from code search, e.g. there can be combined and wildcard filter like `lang:python AND path:comp_a/comp_c/*`
 
@@ -37,6 +42,8 @@ python create_dataset.py --dataset yfcc-10M
 
 The run instruction need to use its docker image and/or `run.py`.
 Which is not convinement for our testing here...
+
+## Faiss Baseline
 
 The faiss baseline for YFCC 100M is doing the following:
 
@@ -117,3 +124,21 @@ If we want to control the cluster, we should use `search_preassigned` or pass ID
 
 Actually I kind of want to see the original image, but seems the dataset does not have the originl image, also the vector is quantized to 8bit.
 We can probably try https://huggingface.co/datasets/dalle-mini/YFCC100M_OpenAI_subset
+
+## Read dataset
+
+Well ... I should just read the code and README, they are a lot cleaner than claude code's summary
+
+```python
+class YFCC100MDataset(DatasetCompetitionFormat):
+    """ the 2023 competition """
+
+    def __init__(self, filtered=True, dummy=False):
+        self.filtered = filtered
+        nb_M = 10 # number of base vectors in millions
+        self.nb_M = nb_M
+        self.nb = 10**6 * nb_M # 10 million base vectors
+        self.d = 192
+        self.nq = 100000
+        self.dtype = "uint8"
+```

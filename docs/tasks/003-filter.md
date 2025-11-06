@@ -67,3 +67,4 @@ See [YFCC100M.md](../dataset/YFCC100M.md) for more details.
 ## Implementation
 
 - [ ] Use local file system with faiss-cpu and tantivy-py
+  - btw: I think it can be slower (maybe much slower) than the faiss baseline ...
