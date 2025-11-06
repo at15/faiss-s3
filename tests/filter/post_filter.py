@@ -232,10 +232,10 @@ def main():
     print(
         "\n💡 Notice: The top vector search result is Federer, but we filtered for Nadal."
     )
+    print("   This demonstrates why post-filtering is ineffective - relevant results")
     print(
-        "   This demonstrates why post-filtering is ineffective - relevant results"
+        "   matching the filter may exist but aren't in the top-k vector search results."
     )
-    print("   matching the filter may exist but aren't in the top-k vector search results.")
 
 
 if __name__ == "__main__":
