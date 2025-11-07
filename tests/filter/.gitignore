@@ -1,0 +1,3 @@
+# Not sure if I should only ignore cache or the session as well
+# I don't think github can render marimo notebook like jupyter notebook
+__marimo__
