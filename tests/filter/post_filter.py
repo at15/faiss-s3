@@ -130,7 +130,7 @@ def create_index(embeddings):
     return index
 
 
-def search_with_post_filter(model, index, query, top_k=10, filter_fn=None):
+def search_with_post_filter(model, index: faiss.Index, query, top_k=10, filter_fn=None):
     """
     Search the index and apply post-filtering to results
 
@@ -144,6 +144,7 @@ def search_with_post_filter(model, index, query, top_k=10, filter_fn=None):
     # Encode query
     query_embedding = model.encode(query, convert_to_numpy=True)
     query_embedding = query_embedding / np.linalg.norm(query_embedding)
+    # faiss requires a query matrix, not a single vector
     query_embedding = np.expand_dims(query_embedding, axis=0)
 
     # NOTE: Search - get more results than needed to account for filtering
