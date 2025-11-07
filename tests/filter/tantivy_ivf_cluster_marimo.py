@@ -470,7 +470,18 @@ def _(mo):
             assert Iq.shape == (n, self.nprobe)
     ```
 
-    We still need to have proper coarse_dis though...
+    We still need to have proper coarse_dis though, seems only IVFPQ need it https://github.com/facebookresearch/faiss/blob/eff0898a13ae4d0d7cfce61092299fea0041479a/contrib/ivf_tools.py#L50-L57
+
+    ```python
+    # the coarse distances are used in IVFPQ with L2 distance and
+    # by_residual=True otherwise we provide dummy coarse_dis
+    if coarse_dis is None:
+        coarse_dis = np.zeros((n, index_ivf.nprobe), dtype=dis_type)
+    else:
+        assert coarse_dis.shape == (n, index_ivf.nprobe)
+
+    return index_ivf.search_preassigned(xq, k, list_nos, coarse_dis)
+    ```
     """)
     return
 
