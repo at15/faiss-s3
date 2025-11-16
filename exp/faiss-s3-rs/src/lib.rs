@@ -1,6 +1,6 @@
 #[cxx::bridge]
 mod ffi {
-    extern "Rust" {}
+    extern "Rust" {} // TODO: expose things from Rust to C++
 
     // Defines what is exposted on C++ side, which are all unsafe
     unsafe extern "C++" {
@@ -12,4 +12,25 @@ mod ffi {
 
 pub fn create_example_ivf_index(index_file_name: &str) {
     ffi::create_example_ivf_index(index_file_name);
+}
+
+#[pyo3::pymodule]
+// From https://github.com/PyO3/pyo3
+// the mod name must match the lib.name in Cargo.toml
+mod faiss_s3_rs {
+    use crate::ffi;
+    use pyo3::prelude::*;
+
+    /// Formats the sum of two numbers as string.
+    #[pyfunction]
+    fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
+        Ok((a + b).to_string())
+    }
+
+    /// Create an example IVF index and save to the given file name.
+    #[pyfunction]
+    fn create_example_ivf_index(index_file_name: &str) -> PyResult<()> {
+        ffi::create_example_ivf_index(index_file_name);
+        Ok(())
+    }
 }

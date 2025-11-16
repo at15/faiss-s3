@@ -37,4 +37,6 @@ The rough plan right now is
 
 - [ ] search local faiss file using python binding calling C++
   - this is does not even require our customized inverted list build
+  - [x] create example index works
 - [x] When using CMake, how does C++ side link the rust implementation during build? ... Or it is linking a rust static library? If we are building a library in C++, it only requires the header and does not do the linking unless we are building a executable.
+- [ ] hook the network request logic for inverted list using rust, no cache (for now), just query and forget

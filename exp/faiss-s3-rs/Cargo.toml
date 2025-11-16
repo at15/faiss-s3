@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 cxx = "1.0"
-# pyo3 = "0.25.0"
+pyo3 = "0.25.0"
 
 # Used for building C++ code
 [build-dependencies]

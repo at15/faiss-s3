@@ -1,0 +1,18 @@
+[build-system]
+requires = ["maturin>=1.9,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "faiss_s3_rs"
+requires-python = ">=3.11"
+# TODO: what is the classifiers for?
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+# TODO: what is dynamic?
+dynamic = ["version"]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
