@@ -17,7 +17,7 @@ Currently we are using AWS C++ SDK to make S3 requests. It has a few issues:
 
 - It only works with S3, it does not work with presigned url, does not work GCS.
   - For rust there is crate like https://github.com/apache/arrow-rs-object-store that is suppose to work for all object storages
-    - Seems it is not importing invidual cloud's SDK
+    - It is not importing invidual cloud's SDK and implemented the auth logic
 - Creating a HTTP(s) server is a bit painful, there are many libraries and we endup having our own TCP based protocol
 - I don't know how to create python binding, I saw faiss using swig, but I feel pyo3 is better
 - Package management is a lot better in rust compared to C++
@@ -37,3 +37,4 @@ The rough plan right now is
 
 - [ ] search local faiss file using python binding calling C++
   - this is does not even require our customized inverted list build
+- [x] When using CMake, how does C++ side link the rust implementation during build? ... Or it is linking a rust static library? If we are building a library in C++, it only requires the header and does not do the linking unless we are building a executable.

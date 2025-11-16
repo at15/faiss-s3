@@ -1,0 +1,17 @@
+[package]
+name = "faiss-s3-rs"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "faiss_s3_rs"
+# NOTE: need both cdylib for python and rlib for main.rs
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+cxx = "1.0"
+# pyo3 = "0.25.0"
+
+# Used for building C++ code
+[build-dependencies]
+cxx-build = "1.0"
