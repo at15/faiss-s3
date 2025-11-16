@@ -2,3 +2,4 @@
 target/
 # CMake build directory
 build/
+*.ivf
