@@ -40,3 +40,40 @@ The rough plan right now is
   - [x] create example index works
 - [x] When using CMake, how does C++ side link the rust implementation during build? ... Or it is linking a rust static library? If we are building a library in C++, it only requires the header and does not do the linking unless we are building a executable.
 - [ ] hook the network request logic for inverted list using rust, no cache (for now), just query and forget
+
+## Read from S3 without cache
+
+Let's first do it from rust, it is a bit easier without python, plus we can run a standalone rust server.
+
+The rough steps are
+
+- Open a index with parameters
+  - object path
+  - offsets of the clusters
+- Search
+
+The pseudo code looks like this:
+
+```text
+// From rust side
+config = {
+  object_path: "s3://bucket/path/to/index.ivf",
+  n_clusters: 1024,
+  cluster_data_offset: 123456,
+}
+
+data_without_invlist = bucket.get_range(object_path, [0, cluster_data_offset])
+// C++ code using the S3ReadNothingInvList to get the number of vectors in each cluster
+// Pass the callback to trigger the rust function to fetch the inverted list data
+faiss_index = ffi::read_index(data_without_invlist, bucket.get_range_callback)
+faiss_index.search(query_vectors, top_k)
+```
+
+- C++ side should be using `unique_ptr` so it drops the index when rust side drop it
+
+Steps
+
+- [ ] make sure the `object_store` crate works for s3 and presigned url
+- [ ] define the interface for passing the callback
+- [ ] test the example ivf file
+- [ ] compare the result, we can use the same quora example, though the query still need embedding generated from python code.
