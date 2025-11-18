@@ -6,19 +6,23 @@ mod ffi {
     unsafe extern "C++" {
         include!("faiss_s3.h"); // Used in the generated lib.rs.h
 
-        fn create_example_ivf_index(index_file_name: &str);
+        fn CreateExampleIVFIndex(index_file_name: &str);
+        fn GetClusterDataOffset(index_file_name: &str) -> Result<usize>;
     }
 }
 
 pub fn create_example_ivf_index(index_file_name: &str) {
-    ffi::create_example_ivf_index(index_file_name);
+    ffi::CreateExampleIVFIndex(index_file_name);
+}
+
+pub fn get_cluster_data_offset(index_file_name: &str) -> Result<usize, String> {
+    ffi::GetClusterDataOffset(index_file_name).map_err(|e| e.to_string())
 }
 
 #[pyo3::pymodule]
 // From https://github.com/PyO3/pyo3
 // the mod name must match the lib.name in Cargo.toml
 mod faiss_s3_rs {
-    use crate::ffi;
     use pyo3::prelude::*;
 
     /// Formats the sum of two numbers as string.
@@ -30,7 +34,7 @@ mod faiss_s3_rs {
     /// Create an example IVF index and save to the given file name.
     #[pyfunction]
     fn create_example_ivf_index(index_file_name: &str) -> PyResult<()> {
-        ffi::create_example_ivf_index(index_file_name);
+        crate::create_example_ivf_index(index_file_name);
         Ok(())
     }
 }

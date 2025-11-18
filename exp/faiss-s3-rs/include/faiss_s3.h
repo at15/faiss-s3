@@ -5,4 +5,10 @@
 /**
  * Create an example IVF index and write it to the given file.
  */
-void create_example_ivf_index(rust::Str index_file_name);
+void CreateExampleIVFIndex(rust::Str index_file_name);
+
+/**
+ * Calculate the offset of inverted list cluster data in a IVF index file.
+ * This allow loading the index without the cluster data part later.
+ */
+size_t GetClusterDataOffset(rust::Str index_file_name);

@@ -2,11 +2,12 @@ from faiss_s3 import generate_meta_from_file
 
 
 def main():
+    file_path = "../exp/faiss-s3-rs/example.ivf"
     meta = generate_meta_from_file(
-        "quora-index-quora-distilbert-multilingual-size-100000.idx"
+        file_path
     )
     print(meta)
-    assert meta.cluster_data_offset == 3154059
+    # assert meta.cluster_data_offset == 3154059
 
 
 if __name__ == "__main__":

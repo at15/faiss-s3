@@ -9,4 +9,4 @@ build:
 .PHONY: format
 format:
 	cargo fmt
-	clang-format -i src/faiss_s3.cpp include/faiss_s3.h
+	clang-format -i src/faiss_s3.cpp include/faiss_s3.h src/s3_inverted_lists.cpp include/s3_inverted_lists.h
