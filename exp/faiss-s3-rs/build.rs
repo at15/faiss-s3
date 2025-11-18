@@ -25,6 +25,8 @@ fn main() {
     // TODO: only works on macOS
     println!("cargo:rustc-link-lib=framework=Accelerate");
 
+    println!("cargo:rerun-if-changed=src/s3_inverted_lists.cpp");
+    println!("cargo:rerun-if-changed=include/s3_inverted_lists.h");
     println!("cargo:rerun-if-changed=src/faiss_s3.cpp");
     println!("cargo:rerun-if-changed=include/faiss_s3.h");
     println!("cargo:rerun-if-changed=CMakeLists.txt");

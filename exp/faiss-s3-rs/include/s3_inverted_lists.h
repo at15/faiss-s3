@@ -28,6 +28,16 @@ struct S3ReadNothingInvertedLists : faiss::ReadOnlyInvertedLists {
   const idx_t *get_ids(size_t list_no) const override;
 };
 
+// IO flag for S3 lazy loading
+// 0x7333 = "s3" in hex (big-endian for fourcc)
+// Combined with IO_FLAG_SKIP_IVF_DATA and "il" prefix → "ils3"
+// IO flag for S3 on-demand loading
+// fourcc("ils3") = 0x33736c69, so upper 16 bits = 0x3373
+const int IO_FLAG_S3 = faiss::IO_FLAG_SKIP_IVF_DATA | 0x33730000;
+
+// Register the IOHook so you can use IO_FLAG_S3 and get S3ReadNothingInvertedLists.
+void RegisterS3ReadNothingIOHook();
+
 // TODO: Actual implementation that accepts callback for S3 fetching logic
 
 // TODO: check the prefetch logic, seems to be useful to allow us not calling

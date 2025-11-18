@@ -20,7 +20,11 @@ find_package(faiss REQUIRED)
 # NOTE: We need to add the cxx bridge into the library
 set(BRIDGE_CPP ${CARGO_TARGET_DIR}/cxxbridge/faiss-s3-rs/src/lib.rs.cc)
 
-add_library(faiss-s3-cpp src/faiss_s3.cpp ${BRIDGE_CPP})
+add_library(faiss-s3-cpp
+    src/faiss_s3.cpp
+    src/s3_inverted_lists.cpp
+    ${BRIDGE_CPP}
+)
 
 target_include_directories(
     faiss-s3-cpp
