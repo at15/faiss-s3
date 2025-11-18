@@ -75,5 +75,24 @@ Steps
 
 - [ ] make sure the `object_store` crate works for s3 and presigned url
 - [ ] define the interface for passing the callback
+  - [ ] how to make the async method sync and block until the data is ready
 - [ ] test the example ivf file
 - [ ] compare the result, we can use the same quora example, though the query still need embedding generated from python code.
+
+## Read from S3 using object_store crate
+
+I have a s3 mock server running locally on port 9000.
+I used run client with following shell config
+
+```bash
+export AWS_ACCESS_KEY_ID=test
+export AWS_SECRET_ACCESS_KEY=test
+export AWS_REGION=us-east-1
+export AWS_EC2_METADATA_DISABLED=true
+export S3_ENDPOINT_URL=http://localhost:9000
+export AWS_ENDPOINT_URL_S3=http://localhost:9000
+```
+
+I want to update `main.rs` to create a new `test_object_store` function that tests reading from S3 using the `object_store` crate.
+
+There is existing file in bucket `test-bucket` with key `test.txt`.

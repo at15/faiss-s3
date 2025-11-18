@@ -15,7 +15,8 @@ S3ReadNothingInvertedLists::S3ReadNothingInvertedLists(
     : faiss::ReadOnlyInvertedLists(nlist, code_size), cluster_sizes(sizes) {}
 
 size_t S3ReadNothingInvertedLists::list_size(size_t list_no) const {
-  // Return actual size because we are using it to calculate cluster data offsets.
+  // Return actual size because we are using it to calculate cluster data
+  // offsets.
   return cluster_sizes[list_no];
 }
 
@@ -53,8 +54,8 @@ struct S3ReadNothingIOHook : faiss::InvertedListsIOHook {
   read_ArrayInvertedLists(faiss::IOReader *f, int io_flags, size_t nlist,
                           size_t code_size,
                           const std::vector<size_t> &sizes) const override {
-    std::cout << "[S3ReadNothingIOHook] nlist=" << nlist << ", code_size=" << code_size
-              << std::endl;
+    std::cout << "[S3ReadNothingIOHook] nlist=" << nlist
+              << ", code_size=" << code_size << std::endl;
 
     // Save the sizes for each cluster
     auto s3il = new S3ReadNothingInvertedLists(nlist, code_size, sizes);

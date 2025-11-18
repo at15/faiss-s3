@@ -35,7 +35,8 @@ struct S3ReadNothingInvertedLists : faiss::ReadOnlyInvertedLists {
 // fourcc("ils3") = 0x33736c69, so upper 16 bits = 0x3373
 const int IO_FLAG_S3 = faiss::IO_FLAG_SKIP_IVF_DATA | 0x33730000;
 
-// Register the IOHook so you can use IO_FLAG_S3 and get S3ReadNothingInvertedLists.
+// Register the IOHook so you can use IO_FLAG_S3 and get
+// S3ReadNothingInvertedLists.
 void RegisterS3ReadNothingIOHook();
 
 // TODO: Actual implementation that accepts callback for S3 fetching logic
