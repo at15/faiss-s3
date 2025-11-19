@@ -24,10 +24,14 @@ size_t GetClusterDataOffset(rust::Str index_file_name);
  * Wrapper on IVF index that can make S3 request using rust code.
  */
 struct FaissIVFIndexS3 {
-  FaissIVFIndexS3(std::unique_ptr<faiss::IndexIVF> index);
+  FaissIVFIndexS3(std::unique_ptr<faiss::IndexIVF> index,
+                  std::vector<size_t> cluster_sizes);
+
+  rust::Vec<uint64_t> ClusterSizes() const;
 
 private:
   std::unique_ptr<faiss::IndexIVF> index;
+  std::vector<size_t> cluster_sizes;
 };
 
 std::unique_ptr<FaissIVFIndexS3>

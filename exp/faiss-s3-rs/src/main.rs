@@ -54,9 +54,14 @@ async fn test_ivf_s3() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create Faiss index from the downloaded metadata
     // This will create an index with S3ReadNothingInvertedLists placeholder
-    let _index =
+    let index =
         faiss_s3_rs::create_faiss_ivf_index_s3(index_without_cluster_data)?;
     println!("Successfully created Faiss IVF index from S3");
+
+    let cluster_sizes = index.ClusterSizes();
+    for (i, size) in cluster_sizes.iter().enumerate() {
+        println!("Cluster {}: size = {}", i, size);
+    }
 
     // TODO: search with actual inverted lists
 

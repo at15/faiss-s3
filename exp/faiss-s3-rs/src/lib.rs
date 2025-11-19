@@ -12,6 +12,8 @@ mod ffi {
 
         type FaissIVFIndexS3;
 
+        fn ClusterSizes(self: &FaissIVFIndexS3) -> Vec<u64>;
+
         fn CreateFaissIVFIndexS3(
             index_without_cluster_data: Vec<u8>,
         ) -> Result<UniquePtr<FaissIVFIndexS3>>;

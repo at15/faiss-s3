@@ -6,6 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # TODO: Change to release, get it automatically from cargo's env/flag?
 set(CMAKE_BUILD_TYPE Debug)
 
+# NOTE: We don't need it for the error: was built for newer 'macOS' version (26.0) than being linked (11.0)
+# We just need to clean up the target and build folder.
+# Set macOS deployment target to match Rust's default
+# if(APPLE)
+#   set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS deployment version" FORCE)
+# endif()
 
 set(CARGO_MANIFEST ${CMAKE_SOURCE_DIR}/Cargo.toml)
 set(CARGO_TARGET_DIR ${CMAKE_SOURCE_DIR}/target)

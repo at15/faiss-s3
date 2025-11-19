@@ -69,9 +69,9 @@ void SearchExampleIVFIndex(rust::Str index_file_name) {
   ivf_index->quantizer->search(n, x.data(), nprobe, coarse_dis.get(), idx.get(),
                                nullptr); // TODO: pass params->quantizer_params
   double t1 = faiss::getmillisecs();
-  // TODO: In faiss code, it will call the prefetch_lists() to prefetch the clusters.
-  // In our rust code, we can fetch the clusters in parallel using async io and
-  // block until all of them are fetched/error out
+  // TODO: In faiss code, it will call the prefetch_lists() to prefetch the
+  // clusters. In our rust code, we can fetch the clusters in parallel using
+  // async io and block until all of them are fetched/error out
 
   // TODO: hard coded to top 5
   const idx_t k = 5;
@@ -141,8 +141,20 @@ size_t GetClusterDataOffset(rust::Str index_file_name) {
   return total_file_size - cluster_data_size;
 }
 
-FaissIVFIndexS3::FaissIVFIndexS3(std::unique_ptr<faiss::IndexIVF> _index)
-    : index(std::move(_index)) {}
+FaissIVFIndexS3::FaissIVFIndexS3(std::unique_ptr<faiss::IndexIVF> _index,
+                                 std::vector<size_t> _cluster_sizes)
+    : index(std::move(_index)), cluster_sizes(std::move(_cluster_sizes)) {}
+
+rust::Vec<uint64_t> FaissIVFIndexS3::ClusterSizes() const {
+  rust::Vec<uint64_t> result;
+  result.reserve(cluster_sizes.size());
+  // TODO: Seems this is most efficient copy we got? 
+  // https://cxx.rs/binding/vec.html
+  for (size_t size : cluster_sizes) {
+    result.push_back(static_cast<uint64_t>(size));
+  }
+  return result;
+}
 
 std::unique_ptr<FaissIVFIndexS3>
 CreateFaissIVFIndexS3(rust::Vec<uint8_t> index_without_cluster_data) {
@@ -154,10 +166,21 @@ CreateFaissIVFIndexS3(rust::Vec<uint8_t> index_without_cluster_data) {
   faiss::Index *index = faiss::read_index(&reader, faiss_s3::IO_FLAG_S3);
   faiss::IndexIVF *ivf_index = dynamic_cast<faiss::IndexIVF *>(index);
   if (ivf_index == nullptr) {
-    delete index; // Clean up if cast fails
+    delete index;
     throw std::runtime_error("Index is not IVF type");
   }
 
+  faiss_s3::S3ReadNothingInvertedLists *read_nothing_invlists =
+      dynamic_cast<faiss_s3::S3ReadNothingInvertedLists *>(ivf_index->invlists);
+  if (read_nothing_invlists == nullptr) {
+    delete index;
+    throw std::runtime_error(
+        "Index inverted lists is not S3ReadNothingInvertedLists");
+  }
+  std::vector<size_t> cluster_sizes = read_nothing_invlists->cluster_sizes;
+
+  // TODO: replace invlist to allow search
+
   return std::make_unique<FaissIVFIndexS3>(
-      std::unique_ptr<faiss::IndexIVF>(ivf_index));
+      std::unique_ptr<faiss::IndexIVF>(ivf_index), cluster_sizes);
 }

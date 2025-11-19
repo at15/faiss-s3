@@ -1,3 +1,8 @@
+.PHONY: clean
+clean:
+	rm -rf target
+	rm -rf build
+
 .PHONY: config
 config:
 	./config.sh
