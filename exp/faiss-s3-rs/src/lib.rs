@@ -7,12 +7,17 @@ mod ffi {
         include!("faiss_s3.h"); // Used in the generated lib.rs.h
 
         fn CreateExampleIVFIndex(index_file_name: &str);
+        fn SearchExampleIVFIndex(index_file_name: &str);
         fn GetClusterDataOffset(index_file_name: &str) -> Result<usize>;
     }
 }
 
 pub fn create_example_ivf_index(index_file_name: &str) {
     ffi::CreateExampleIVFIndex(index_file_name);
+}
+
+pub fn search_example_ivf_index(index_file_name: &str) {
+    ffi::SearchExampleIVFIndex(index_file_name);
 }
 
 pub fn get_cluster_data_offset(index_file_name: &str) -> Result<usize, String> {

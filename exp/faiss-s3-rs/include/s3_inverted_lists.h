@@ -39,7 +39,29 @@ const int IO_FLAG_S3 = faiss::IO_FLAG_SKIP_IVF_DATA | 0x33730000;
 // S3ReadNothingInvertedLists.
 void RegisterS3ReadNothingIOHook();
 
-// TODO: Actual implementation that accepts callback for S3 fetching logic
+// Use Rust to make IO requests.
+// TODO: Not implemented ... yet.
+struct S3RustIOInvertedLists : faiss::ReadOnlyInvertedLists {
+  std::vector<size_t> cluster_sizes;
+
+  // TODO: We should use one callback
+  using S3FetchCodesCallback = std::function<const uint8_t *(size_t list_no)>;
+
+  using S3FetchIdsCallback = std::function<const idx_t *(size_t list_no)>;
+
+  S3RustIOInvertedLists(size_t nlist, size_t code_size,
+                        const std::vector<size_t> &sizes,
+                        S3FetchCodesCallback fetch_codes_callback,
+                        S3FetchIdsCallback fetch_ids_callback);
+
+  size_t list_size(size_t list_no) const override;
+  const uint8_t *get_codes(size_t list_no) const override;
+  const idx_t *get_ids(size_t list_no) const override;
+
+private:
+  S3FetchCodesCallback fetch_codes_callback;
+  S3FetchIdsCallback fetch_ids_callback;
+};
 
 // TODO: check the prefetch logic, seems to be useful to allow us not calling
 // search_preassigned directly

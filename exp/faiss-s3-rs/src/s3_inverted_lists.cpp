@@ -72,4 +72,26 @@ void RegisterS3ReadNothingIOHook() {
     registered = true;
   }
 }
+
+// ==== S3RustIOInvertedLists Start ====
+S3RustIOInvertedLists::S3RustIOInvertedLists(
+    size_t nlist, size_t code_size, const std::vector<size_t> &sizes,
+    S3FetchCodesCallback fetch_codes_callback,
+    S3FetchIdsCallback fetch_ids_callback)
+    : faiss::ReadOnlyInvertedLists(nlist, code_size), cluster_sizes(sizes),
+      fetch_codes_callback(std::move(fetch_codes_callback)),
+      fetch_ids_callback(std::move(fetch_ids_callback)) {}
+
+size_t S3RustIOInvertedLists::list_size(size_t list_no) const {
+  return cluster_sizes[list_no];
+}
+
+const uint8_t *S3RustIOInvertedLists::get_codes(size_t list_no) const {
+  return fetch_codes_callback(list_no);
+}
+
+const idx_t *S3RustIOInvertedLists::get_ids(size_t list_no) const {
+  return fetch_ids_callback(list_no);
+}
+// ==== S3RustIOInvertedLists End ====
 } // namespace faiss_s3
