@@ -45,7 +45,8 @@
 			"ctime": "cpp",
 			"optional": "cpp",
 			"queue": "cpp",
-			"stack": "cpp"
+			"stack": "cpp",
+			"vector": "cpp",
 		}
 	}
 }

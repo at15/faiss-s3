@@ -2,12 +2,47 @@ use object_store::aws::AmazonS3Builder;
 use object_store::{ObjectStore, path::Path};
 use std::sync::Arc;
 
-fn test_ivf() {
+fn test_ivf_local_file() {
     faiss_s3_rs::create_example_ivf_index("example.ivf");
     let offset = faiss_s3_rs::get_cluster_data_offset("example.ivf");
     // 52139, matches the python output from tests/test_meta.py
     println!("Cluster data offset: {:?}", offset);
     faiss_s3_rs::search_example_ivf_index("example.ivf");
+}
+
+fn test_ivf_s3() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Testing IVF on S3...");
+
+    // Build S3 client with configuration from environment variables
+    // This matches the configuration used in your C++ implementation
+    let s3 = AmazonS3Builder::new()
+        .with_bucket_name("test-bucket")
+        .with_region("us-east-1")
+        .with_endpoint(
+            std::env::var("S3_ENDPOINT_URL")
+                .unwrap_or_else(|_| "http://localhost:9000".to_string()),
+        )
+        .with_access_key_id(
+            std::env::var("AWS_ACCESS_KEY_ID")
+                .unwrap_or_else(|_| "test".to_string()),
+        )
+        .with_secret_access_key(
+            std::env::var("AWS_SECRET_ACCESS_KEY")
+                .unwrap_or_else(|_| "test".to_string()),
+        )
+        .with_allow_http(true)
+        .build()?;
+
+    let s3: Arc<dyn ObjectStore> = Arc::new(s3);
+
+    // Test reading the existing example.ivf file
+    let path = Path::from("example.ivf");
+    let cluster_data_offset = 52139; // TODO: hard coded for now
+
+    // TODO: fetch the range to get index_without_cluster_data
+    let index = faiss_s3_rs::create_faiss_ivf_index_s3(index_without_cluster_data)?;
+
+    Ok(())
 }
 
 async fn test_object_store() -> Result<(), Box<dyn std::error::Error>> {
@@ -77,7 +112,7 @@ async fn test_object_store() -> Result<(), Box<dyn std::error::Error>> {
 async fn main() {
     println!("Hello, world!");
 
-    test_ivf();
+    test_ivf_local_file();
 
     if let Err(e) = test_object_store().await {
         eprintln!("Error in test_object_store: {}", e);

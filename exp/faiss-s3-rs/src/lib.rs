@@ -9,6 +9,12 @@ mod ffi {
         fn CreateExampleIVFIndex(index_file_name: &str);
         fn SearchExampleIVFIndex(index_file_name: &str);
         fn GetClusterDataOffset(index_file_name: &str) -> Result<usize>;
+
+        type FaissIVFIndexS3;
+
+        fn CreateFaissIVFIndexS3(
+            index_without_cluster_data: Vec<u8>,
+        ) -> Result<UniquePtr<FaissIVFIndexS3>>;
     }
 }
 
@@ -22,6 +28,13 @@ pub fn search_example_ivf_index(index_file_name: &str) {
 
 pub fn get_cluster_data_offset(index_file_name: &str) -> Result<usize, String> {
     ffi::GetClusterDataOffset(index_file_name).map_err(|e| e.to_string())
+}
+
+pub fn create_faiss_ivf_index_s3(
+    index_without_cluster_data: Vec<u8>,
+) -> Result<cxx::UniquePtr<ffi::FaissIVFIndexS3>, String> {
+    ffi::CreateFaissIVFIndexS3(index_without_cluster_data)
+        .map_err(|e| e.to_string())
 }
 
 #[pyo3::pymodule]

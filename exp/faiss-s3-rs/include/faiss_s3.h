@@ -1,5 +1,7 @@
 #pragma once
 
+#include <faiss/IndexIVF.h>
+
 #include "rust/cxx.h" // generated in target/cxxbridge/rust/cxx.h
 
 /**
@@ -17,3 +19,15 @@ void SearchExampleIVFIndex(rust::Str index_file_name);
  * This allow loading the index without the cluster data part later.
  */
 size_t GetClusterDataOffset(rust::Str index_file_name);
+
+/**
+ * Wrapper on IVF index that can make S3 request using rust code.
+ */
+struct FaissIVFIndexS3 {
+  std::unique_ptr<faiss::IndexIVF> index;
+
+  FaissIVFIndexS3(std::unique_ptr<faiss::IndexIVF> index);
+};
+
+std::unique_ptr<FaissIVFIndexS3>
+CreateFaissIVFIndexS3(rust::Vec<uint8_t> index_without_cluster_data);

@@ -137,3 +137,24 @@ size_t GetClusterDataOffset(rust::Str index_file_name) {
 
   return total_file_size - cluster_data_size;
 }
+
+FaissIVFIndexS3::FaissIVFIndexS3(std::unique_ptr<faiss::IndexIVF> _index)
+    : index(std::move(_index)) {}
+
+std::unique_ptr<FaissIVFIndexS3>
+CreateFaissIVFIndexS3(rust::Vec<uint8_t> index_without_cluster_data) {
+  faiss::VectorIOReader reader;
+  reader.data = std::vector<uint8_t>(index_without_cluster_data.begin(),
+                                     index_without_cluster_data.end());
+
+  faiss_s3::RegisterS3ReadNothingIOHook();
+  faiss::Index *index = faiss::read_index(&reader, faiss_s3::IO_FLAG_S3);
+  faiss::IndexIVF *ivf_index = dynamic_cast<faiss::IndexIVF *>(index);
+  if (ivf_index == nullptr) {
+    delete index; // Clean up if cast fails
+    throw std::runtime_error("Index is not IVF type");
+  }
+
+  return std::make_unique<FaissIVFIndexS3>(
+      std::unique_ptr<faiss::IndexIVF>(ivf_index));
+}

@@ -52,3 +52,12 @@ import faiss_s3_rs
 print(faiss_s3_rs.sum_as_string(1, 2))
 faiss_s3_rs.create_example_ivf_index("frompy.ivf")
 ```
+
+Upload `example.ivf` to S3 using aws cli (for now)
+
+```bash
+export AWS_ACCESS_KEY_ID=test
+export AWS_SECRET_ACCESS_KEY=test
+export AWS_REGION=us-east-1
+aws s3 cp example.ivf s3://test-bucket/example.ivf --endpoint-url http://localhost:9000
+```
