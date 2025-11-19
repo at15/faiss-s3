@@ -10,7 +10,7 @@ fn test_ivf_local_file() {
     faiss_s3_rs::search_example_ivf_index("example.ivf");
 }
 
-fn test_ivf_s3() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_ivf_s3() -> Result<(), Box<dyn std::error::Error>> {
     println!("Testing IVF on S3...");
 
     // Build S3 client with configuration from environment variables
@@ -39,13 +39,31 @@ fn test_ivf_s3() -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::from("example.ivf");
     let cluster_data_offset = 52139; // TODO: hard coded for now
 
-    // TODO: fetch the range to get index_without_cluster_data
-    let index = faiss_s3_rs::create_faiss_ivf_index_s3(index_without_cluster_data)?;
+    // Fetch index metadata from S3 (bytes 0 to cluster_data_offset)
+    // This downloads the index structure without the actual cluster data
+    println!(
+        "Fetching index metadata from S3 (0..{} bytes)",
+        cluster_data_offset
+    );
+    let get_result = s3.get_range(&path, 0..cluster_data_offset).await?;
+    let index_without_cluster_data = get_result.to_vec();
+    println!(
+        "Downloaded {} bytes of index metadata",
+        index_without_cluster_data.len()
+    );
+
+    // Create Faiss index from the downloaded metadata
+    // This will create an index with S3ReadNothingInvertedLists placeholder
+    let _index =
+        faiss_s3_rs::create_faiss_ivf_index_s3(index_without_cluster_data)?;
+    println!("Successfully created Faiss IVF index from S3");
+
+    // TODO: search with actual inverted lists
 
     Ok(())
 }
 
-async fn test_object_store() -> Result<(), Box<dyn std::error::Error>> {
+async fn _test_object_store() -> Result<(), Box<dyn std::error::Error>> {
     println!("Testing object_store with S3...");
 
     // Build S3 client with configuration from environment variables
@@ -114,7 +132,11 @@ async fn main() {
 
     test_ivf_local_file();
 
-    if let Err(e) = test_object_store().await {
-        eprintln!("Error in test_object_store: {}", e);
+    // if let Err(e) = test_object_store().await {
+    //     eprintln!("Error in test_object_store: {}", e);
+    // }
+
+    if let Err(e) = test_ivf_s3().await {
+        eprintln!("Error in test_ivf_s3: {}", e);
     }
 }
