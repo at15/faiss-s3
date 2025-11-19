@@ -69,6 +69,9 @@ void SearchExampleIVFIndex(rust::Str index_file_name) {
   ivf_index->quantizer->search(n, x.data(), nprobe, coarse_dis.get(), idx.get(),
                                nullptr); // TODO: pass params->quantizer_params
   double t1 = faiss::getmillisecs();
+  // TODO: In faiss code, it will call the prefetch_lists() to prefetch the clusters.
+  // In our rust code, we can fetch the clusters in parallel using async io and
+  // block until all of them are fetched/error out
 
   // TODO: hard coded to top 5
   const idx_t k = 5;
