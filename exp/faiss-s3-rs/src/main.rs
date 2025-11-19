@@ -2,7 +2,7 @@ use object_store::aws::AmazonS3Builder;
 use object_store::{ObjectStore, path::Path};
 use std::sync::Arc;
 
-fn test_ivf_local_file() {
+fn _test_ivf_local_file() {
     faiss_s3_rs::create_example_ivf_index("example.ivf");
     let offset = faiss_s3_rs::get_cluster_data_offset("example.ivf");
     // 52139, matches the python output from tests/test_meta.py
@@ -130,7 +130,7 @@ async fn _test_object_store() -> Result<(), Box<dyn std::error::Error>> {
 async fn main() {
     println!("Hello, world!");
 
-    test_ivf_local_file();
+    // test_ivf_local_file();
 
     // if let Err(e) = test_object_store().await {
     //     eprintln!("Error in test_object_store: {}", e);
