@@ -4,3 +4,7 @@ target/
 build/
 *.ivf
 *.npy
+# From https://amazon-reviews-2023.github.io/
+*.jsonl
+__marimo__
+*.csv

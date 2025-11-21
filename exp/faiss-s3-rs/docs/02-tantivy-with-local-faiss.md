@@ -27,6 +27,7 @@ Things we need to do
   - https://github.com/EricLBuehler/mistral.rs uses candle but comes with many models
   - https://github.com/EricLBuehler/mistral.rs/blob/master/mistralrs/examples/qwen3_embedding/main.rs
   - https://github.com/huggingface/text-embeddings-inference a server with text embedding support
+  - https://github.com/Anush008/fastembed-rs using ONNX and supports sentence transformer models
 
 Tried `mistral.rs` it works
 
@@ -102,3 +103,132 @@ fn CreateExampleIVFIndexWithData(
 ```
 
 ## Build Tantivy index in rust
+
+Copied some code from claude code, it compiles, what we really need are:
+
+Let's use book as an example, we can use https://amazon-reviews-2023.github.io/ the amazon reviews dataset
+
+We need to explore it using python scripts first to know what we are doing
+
+```bash
+pip install marimo
+```
+
+Use [amazon-reviews-converter.py](../amazon-reviews-converter.py) to convert the dataset to a csv file
+
+```text
+============================================================
+DATA ANALYSIS WITH POLARS
+============================================================
+
+Total records: 89251
+
+DataFrame shape: (89251, 7)
+
+------------------------------------------------------------
+UNIQUE MAIN CATEGORIES
+------------------------------------------------------------
+shape: (9, 2)
+┌──────────────────────┬───────┐
+│ main_category        ┆ count │
+│ ---                  ┆ ---   │
+│ str                  ┆ u32   │
+╞══════════════════════╪═══════╡
+│ Appstore for Android ┆ 68679 │
+│ Software             ┆ 18791 │
+│ null                 ┆ 1769  │
+│ Gift Cards           ┆ 4     │
+│ Home Audio & Theater ┆ 2     │
+│ Books                ┆ 2     │
+│ Computers            ┆ 2     │
+│ AMAZON FASHION       ┆ 1     │
+│ Toys & Games         ┆ 1     │
+└──────────────────────┴───────┘
+
+------------------------------------------------------------
+CATEGORIES ANALYSIS
+------------------------------------------------------------
+Records with categories: 18791
+Records without categories (null): 70460
+Records without categories (empty string): 0
+
+Top 20 individual categories:
+shape: (20, 2)
+┌──────────────────────────────┬───────┐
+│ category_list                ┆ count │
+│ ---                          ┆ ---   │
+│ str                          ┆ u32   │
+╞══════════════════════════════╪═══════╡
+│ Software                     ┆ 18791 │
+│ Education & Reference        ┆ 2716  │
+│ Business & Office            ┆ 2322  │
+│ Lifestyle & Hobbies          ┆ 1624  │
+│ Photography & Graphic Design ┆ 1452  │
+│ …                            ┆ …     │
+│ All Microsoft                ┆ 621   │
+│ Photography                  ┆ 613   │
+│ Antivirus                    ┆ 590   │
+│ Music                        ┆ 578   │
+│ Internet Security Suites     ┆ 574   │
+└──────────────────────────────┴───────┘
+
+------------------------------------------------------------
+AVERAGE RATING DISTRIBUTION
+------------------------------------------------------------
+shape: (1, 5)
+┌──────────┬────────┬──────────┬─────┬─────┐
+│ mean     ┆ median ┆ std      ┆ min ┆ max │
+│ ---      ┆ ---    ┆ ---      ┆ --- ┆ --- │
+│ f64      ┆ f64    ┆ f64      ┆ f64 ┆ f64 │
+╞══════════╪════════╪══════════╪═════╪═════╡
+│ 3.354704 ┆ 3.4    ┆ 0.815439 ┆ 0.0 ┆ 5.0 │
+└──────────┴────────┴──────────┴─────┴─────┘
+
+Rating distribution (binned):
+shape: (5, 2)
+┌────────────┬───────┐
+│ rating_bin ┆ count │
+│ ---        ┆ ---   │
+│ cat        ┆ u32   │
+╞════════════╪═══════╡
+│ 0-1        ┆ 3125  │
+│ 1-2        ┆ 3202  │
+│ 2-3        ┆ 20441 │
+│ 3-4        ┆ 49294 │
+│ 4-5        ┆ 13189 │
+└────────────┴───────┘
+
+------------------------------------------------------------
+RATING NUMBER DISTRIBUTION
+------------------------------------------------------------
+shape: (1, 5)
+┌────────────┬────────┬──────────────┬─────┬─────────┐
+│ mean       ┆ median ┆ std          ┆ min ┆ max     │
+│ ---        ┆ ---    ┆ ---          ┆ --- ┆ ---     │
+│ f64        ┆ f64    ┆ f64          ┆ i64 ┆ i64     │
+╞════════════╪════════╪══════════════╪═════╪═════════╡
+│ 606.175875 ┆ 11.0   ┆ 11594.907341 ┆ 0   ┆ 1898759 │
+└────────────┴────────┴──────────────┴─────┴─────────┘
+
+Rating number distribution:
+  Zero ratings: 2959
+  1-10 ratings: 40339
+  11-100 ratings: 30512
+  101-1000 ratings: 12083
+  1000+ ratings: 3358
+
+------------------------------------------------------------
+PRICE DISTRIBUTION
+------------------------------------------------------------
+shape: (1, 5)
+┌──────────┬────────┬───────────┬─────┬────────┐
+│ mean     ┆ median ┆ std       ┆ min ┆ max    │
+│ ---      ┆ ---    ┆ ---       ┆ --- ┆ ---    │
+│ f64      ┆ f64    ┆ f64       ┆ f64 ┆ f64    │
+╞══════════╪════════╪═══════════╪═════╪════════╡
+│ 2.351605 ┆ 0.0    ┆ 22.814413 ┆ 0.0 ┆ 1998.0 │
+└──────────┴────────┴───────────┴─────┴────────┘
+
+Free apps (price = 0): 73044
+Paid apps (price > 0): 16207
+```
