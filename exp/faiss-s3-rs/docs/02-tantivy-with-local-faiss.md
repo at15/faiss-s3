@@ -75,3 +75,30 @@ Now we need a method to pass
 - vectors
 
 We need to flatten `Vec<Vec<f32>>` to `const float*`
+
+The interface that we got working is
+
+- pass a rust `Vec<float>` to C++
+- use `data.data()` to get the raw pointer
+
+```cpp
+void CreateExampleIVFIndexWithData(rust::Str index_file_name, size_t dim,
+                                   size_t n_vectors, rust::Vec<float> data,
+                                   size_t n_clusters) {
+  index.train(N_VECTORS, data.data());
+  index.add(N_VECTORS, data.data());
+}
+```
+
+```rust
+// lib.rs
+fn CreateExampleIVFIndexWithData(
+    index_file_name: &str,
+    dim: usize,
+    n_vectors: usize,
+    data: Vec<f32>,
+    n_clusters: usize,
+);
+```
+
+## Build Tantivy index in rust

@@ -4,6 +4,145 @@ use object_store::aws::AmazonS3Builder;
 use object_store::{ObjectStore, path::Path};
 use std::sync::Arc;
 use std::time::Instant;
+use tantivy::collector::TopDocs;
+use tantivy::query::{QueryParser, RangeQuery};
+use tantivy::schema::*;
+use tantivy::{doc, Index, IndexWriter, ReloadPolicy, TantivyDocument};
+
+fn test_tantivy() -> tantivy::Result<()> {
+    // 1. Define the schema with text and numeric fields
+    let mut schema_builder = Schema::builder();
+    
+    // Text field - stored and indexed for full-text search
+    let title = schema_builder.add_text_field("title", TEXT | STORED);
+    let body = schema_builder.add_text_field("body", TEXT);
+    
+    // Numeric fields - i64, u64, f64 are supported
+    let price = schema_builder.add_u64_field("price", INDEXED | STORED | FAST);
+    let rating = schema_builder.add_f64_field("rating", INDEXED | STORED | FAST);
+    let year = schema_builder.add_i64_field("year", INDEXED | STORED | FAST);
+    
+    let schema = schema_builder.build();
+    
+    // 2. Create the index (in-memory for this example)
+    let index = Index::create_in_ram(schema.clone());
+    
+    // For persistent storage, use:
+    // let index = Index::create_in_dir("/path/to/index", schema.clone())?;
+    
+    // 3. Get an IndexWriter with 50MB buffer
+    let mut index_writer: IndexWriter = index.writer(50_000_000)?;
+    
+    // 4. Index some documents
+    index_writer.add_document(doc!(
+        title => "Rust Programming",
+        body => "Learn Rust with practical examples",
+        price => 29u64,
+        rating => 4.5f64,
+        year => 2023i64,
+    ))?;
+    
+    index_writer.add_document(doc!(
+        title => "Advanced Tantivy",
+        body => "Deep dive into full-text search with Tantivy",
+        price => 45u64,
+        rating => 4.8f64,
+        year => 2024i64,
+    ))?;
+    
+    index_writer.add_document(doc!(
+        title => "Python Basics",
+        body => "Introduction to Python programming",
+        price => 19u64,
+        rating => 4.2f64,
+        year => 2022i64,
+    ))?;
+    
+    index_writer.add_document(doc!(
+        title => "Rust Search Engines",
+        body => "Building search engines with Rust and Tantivy",
+        price => 55u64,
+        rating => 4.9f64,
+        year => 2024i64,
+    ))?;
+    
+    // 5. Commit the changes
+    index_writer.commit()?;
+    
+    // 6. Get a reader - ReloadPolicy determines when index changes are visible
+    let reader = index
+        .reader_builder()
+        .reload_policy(ReloadPolicy::OnCommitWithDelay)
+        .try_into()?;
+    
+    let searcher = reader.searcher();
+    
+    println!("=== TEXT SEARCH ===");
+    // 7. Text search using QueryParser
+    let query_parser = QueryParser::for_index(&index, vec![title, body]);
+    let query = query_parser.parse_query("Rust")?;
+    
+    let top_docs = searcher.search(&query, &TopDocs::with_limit(10))?;
+    
+    for (_score, doc_address) in top_docs {
+        let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
+        println!("Found: {:?}", retrieved_doc);
+    }
+    
+    println!("\n=== NUMERIC RANGE SEARCH ===");
+    // 8. Numeric range query: price between 20 and 50
+    let range_query = RangeQuery::new(
+        std::ops::Bound::Included(Term::from_field_u64(price, 20u64)),
+        std::ops::Bound::Included(Term::from_field_u64(price, 50u64)),
+    );
+
+    let top_docs = searcher.search(&range_query, &TopDocs::with_limit(10))?;
+    println!("Items priced between 20-50:");
+    for (_score, doc_address) in top_docs {
+        let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
+        println!("  {:?}", retrieved_doc);
+    }
+    
+    println!("\n=== COMBINED QUERY ===");
+    // 9. Combined text + numeric query
+    // Find "Rust" documents with rating >= 4.5
+    use tantivy::query::BooleanQuery;
+    use tantivy::query::Occur;
+    
+    let text_query = query_parser.parse_query("Rust")?;
+    let rating_query = RangeQuery::new(
+        std::ops::Bound::Included(Term::from_field_f64(rating, 4.5f64)),
+        std::ops::Bound::Unbounded,
+    );
+    
+    let bool_query = BooleanQuery::from(vec![
+        (Occur::Must, text_query),
+        (Occur::Must, Box::new(rating_query)),
+    ]);
+    
+    let top_docs = searcher.search(&bool_query, &TopDocs::with_limit(10))?;
+    println!("Rust books with rating >= 4.5:");
+    for (_score, doc_address) in top_docs {
+        let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
+        println!("  {:?}", retrieved_doc);
+    }
+    
+    println!("\n=== FAST FIELD ACCESS ===");
+    // 10. Fast fields for efficient numeric access/sorting
+    // Fast fields are column-oriented storage optimized for accessing
+    // all values of a field across documents
+    if searcher.segment_readers().len() > 0 {
+        let segment_reader = &searcher.segment_readers()[0];
+        let price_reader = segment_reader.fast_fields().u64("price")?;
+        println!("Fast field access to prices:");
+        for doc_id in 0..segment_reader.max_doc() {
+            let price_val = price_reader.first(doc_id).unwrap_or(0);
+            println!("  Doc {}: price = {}", doc_id, price_val);
+        }
+    }
+    
+    Ok(())
+}
 
 fn test_embedding_random() -> Result<()> {
     use rand::Rng;
@@ -218,11 +357,15 @@ async fn main() {
     //     eprintln!("Error in test_ivf_s3: {}", e);
     // }
 
-    if let Err(e) = test_embedding_random() {
-        eprintln!("Error in test_embedding_random: {}", e);
-    }
+    // if let Err(e) = test_embedding_random() {
+    //     eprintln!("Error in test_embedding_random: {}", e);
+    // }
 
     // if let Err(e) = test_embedding().await {
     //     eprintln!("Error in test_embedding: {}", e);
     // }
+
+    if let Err(e) = test_tantivy() {
+        eprintln!("Error in test_tantivy: {}", e);
+    }
 }
