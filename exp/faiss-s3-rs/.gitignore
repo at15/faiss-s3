@@ -3,3 +3,4 @@ target/
 # CMake build directory
 build/
 *.ivf
+*.npy

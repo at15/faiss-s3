@@ -1,6 +1,39 @@
+use anyhow::Result;
+use mistralrs::{Device, EmbeddingModelBuilder, EmbeddingRequest, Tensor};
 use object_store::aws::AmazonS3Builder;
 use object_store::{ObjectStore, path::Path};
 use std::sync::Arc;
+
+async fn test_embedding() -> Result<()> {
+    // NOTE: Automatically download model from huggingface
+    // hf auth login
+    let model = EmbeddingModelBuilder::new("google/embeddinggemma-300m")
+        .with_logging()
+        .with_throughput_logging()
+        .build()
+        .await?;
+
+    let dim = 768;
+    let n_vectors = 5000; // TODO: 100k is too much for gemma moel on my mac
+    let n_clusters = 50;
+    let mut prompts: Vec<String> = vec![];
+    for i in 0..n_vectors {
+        prompts.push(format!("This is a test prompt {}", i));
+    }
+
+    let embeddings = model
+        .generate_embeddings(
+            EmbeddingRequest::builder().add_prompts(prompts),
+        )
+        .await?;
+
+    // Flatten the embeddings
+    let embeddings = embeddings.into_iter().flatten().collect::<Vec<f32>>();
+
+    faiss_s3_rs::create_example_ivf_index_with_data("test-from-rust.ivf", dim, n_vectors, embeddings, n_clusters);
+
+    Ok(())
+}
 
 fn _test_ivf_local_file() {
     faiss_s3_rs::create_example_ivf_index("example.ivf");
@@ -141,7 +174,11 @@ async fn main() {
     //     eprintln!("Error in test_object_store: {}", e);
     // }
 
-    if let Err(e) = test_ivf_s3().await {
-        eprintln!("Error in test_ivf_s3: {}", e);
+    // if let Err(e) = test_ivf_s3().await {
+    //     eprintln!("Error in test_ivf_s3: {}", e);
+    // }
+
+    if let Err(e) = test_embedding().await {
+        eprintln!("Error in test_embedding: {}", e);
     }
 }

@@ -13,6 +13,8 @@ cxx = "1.0"
 object_store = { version = "0.12.4", features = ["aws"] }
 pyo3 = "0.25.0"
 tokio = { version = "1", features = ["full"] }
+mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs" }
+anyhow = { version = "1.0", features = ["backtrace"] }
 
 
 # Used for building C++ code

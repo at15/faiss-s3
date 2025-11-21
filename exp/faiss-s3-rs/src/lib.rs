@@ -7,6 +7,13 @@ mod ffi {
         include!("faiss_s3.h"); // Used in the generated lib.rs.h
 
         fn CreateExampleIVFIndex(index_file_name: &str);
+        fn CreateExampleIVFIndexWithData(
+            index_file_name: &str,
+            dim: usize,
+            n_vectors: usize,
+            data: Vec<f32>,
+            n_clusters: usize,
+        );
         fn SearchExampleIVFIndex(index_file_name: &str);
         fn GetClusterDataOffset(index_file_name: &str) -> Result<usize>;
 
@@ -22,6 +29,10 @@ mod ffi {
 
 pub fn create_example_ivf_index(index_file_name: &str) {
     ffi::CreateExampleIVFIndex(index_file_name);
+}
+
+pub fn create_example_ivf_index_with_data(index_file_name: &str, dim: usize, n_vectors: usize, data: Vec<f32>, n_clusters: usize) {
+    ffi::CreateExampleIVFIndexWithData(index_file_name, dim, n_vectors, data, n_clusters);
 }
 
 pub fn search_example_ivf_index(index_file_name: &str) {

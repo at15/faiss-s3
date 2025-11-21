@@ -9,6 +9,8 @@
  */
 void CreateExampleIVFIndex(rust::Str index_file_name);
 
+void CreateExampleIVFIndexWithData(rust::Str index_file_name, size_t dim, size_t n_vectors, rust::Vec<float> data, size_t n_clusters);
+
 /**
  * Search and example IVF index
  */

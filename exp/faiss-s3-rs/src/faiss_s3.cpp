@@ -19,7 +19,7 @@ void CreateExampleIVFIndex(rust::Str index_file_name) {
   std::cout << "Creating example IVF index in " << index_file_name << std::endl;
   const size_t VEC_DIM = 128;       // Vector dimension
   const size_t N_CLUSTERS = 100;    // Number of IVF clusters
-  const size_t N_VECTORS = 100'000; // Number of vectors to index
+  const size_t N_VECTORS = 10'000; // Number of vectors to index
 
   // Create index, default invert list implementation is memory
   faiss::IndexFlatL2 quantizer(VEC_DIM);
@@ -32,6 +32,25 @@ void CreateExampleIVFIndex(rust::Str index_file_name) {
 
   index.train(N_VECTORS, xb.data());
   index.add(N_VECTORS, xb.data());
+
+  // NOTE: rust::Str.data() does not have null terminator
+  // https://cxx.rs/binding/str.html
+  faiss::write_index(&index, std::string(index_file_name).c_str());
+}
+
+void CreateExampleIVFIndexWithData(rust::Str index_file_name, size_t dim, size_t n_vectors, rust::Vec<float> data, size_t n_clusters) {
+  std::cout << "Creating example IVF index with data in " << index_file_name << std::endl;
+  const size_t VEC_DIM = dim;       // Vector dimension
+  const size_t N_CLUSTERS = n_clusters;    // Number of IVF clusters
+  const size_t N_VECTORS = n_vectors; // Number of vectors to index
+
+  // Create index, default invert list implementation is memory
+  faiss::IndexFlatL2 quantizer(VEC_DIM);
+  faiss::IndexIVFFlat index(&quantizer, VEC_DIM, N_CLUSTERS);
+  index.verbose = true;
+
+  index.train(N_VECTORS, data.data());
+  index.add(N_VECTORS, data.data());
 
   // NOTE: rust::Str.data() does not have null terminator
   // https://cxx.rs/binding/str.html
@@ -148,7 +167,7 @@ FaissIVFIndexS3::FaissIVFIndexS3(std::unique_ptr<faiss::IndexIVF> _index,
 rust::Vec<uint64_t> FaissIVFIndexS3::ClusterSizes() const {
   rust::Vec<uint64_t> result;
   result.reserve(cluster_sizes.size());
-  // TODO: Seems this is most efficient copy we got? 
+  // TODO: Seems this is most efficient copy we got?
   // https://cxx.rs/binding/vec.html
   for (size_t size : cluster_sizes) {
     result.push_back(static_cast<uint64_t>(size));
