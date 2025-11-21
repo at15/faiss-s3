@@ -31,8 +31,20 @@ pub fn create_example_ivf_index(index_file_name: &str) {
     ffi::CreateExampleIVFIndex(index_file_name);
 }
 
-pub fn create_example_ivf_index_with_data(index_file_name: &str, dim: usize, n_vectors: usize, data: Vec<f32>, n_clusters: usize) {
-    ffi::CreateExampleIVFIndexWithData(index_file_name, dim, n_vectors, data, n_clusters);
+pub fn create_example_ivf_index_with_data(
+    index_file_name: &str,
+    dim: usize,
+    n_vectors: usize,
+    data: Vec<f32>,
+    n_clusters: usize,
+) {
+    ffi::CreateExampleIVFIndexWithData(
+        index_file_name,
+        dim,
+        n_vectors,
+        data,
+        n_clusters,
+    );
 }
 
 pub fn search_example_ivf_index(index_file_name: &str) {

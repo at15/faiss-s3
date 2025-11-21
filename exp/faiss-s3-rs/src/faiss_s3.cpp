@@ -17,8 +17,8 @@
 
 void CreateExampleIVFIndex(rust::Str index_file_name) {
   std::cout << "Creating example IVF index in " << index_file_name << std::endl;
-  const size_t VEC_DIM = 128;       // Vector dimension
-  const size_t N_CLUSTERS = 100;    // Number of IVF clusters
+  const size_t VEC_DIM = 128;      // Vector dimension
+  const size_t N_CLUSTERS = 100;   // Number of IVF clusters
   const size_t N_VECTORS = 10'000; // Number of vectors to index
 
   // Create index, default invert list implementation is memory
@@ -38,11 +38,14 @@ void CreateExampleIVFIndex(rust::Str index_file_name) {
   faiss::write_index(&index, std::string(index_file_name).c_str());
 }
 
-void CreateExampleIVFIndexWithData(rust::Str index_file_name, size_t dim, size_t n_vectors, rust::Vec<float> data, size_t n_clusters) {
-  std::cout << "Creating example IVF index with data in " << index_file_name << std::endl;
-  const size_t VEC_DIM = dim;       // Vector dimension
-  const size_t N_CLUSTERS = n_clusters;    // Number of IVF clusters
-  const size_t N_VECTORS = n_vectors; // Number of vectors to index
+void CreateExampleIVFIndexWithData(rust::Str index_file_name, size_t dim,
+                                   size_t n_vectors, rust::Vec<float> data,
+                                   size_t n_clusters) {
+  std::cout << "Creating example IVF index with data in " << index_file_name
+            << std::endl;
+  const size_t VEC_DIM = dim;           // Vector dimension
+  const size_t N_CLUSTERS = n_clusters; // Number of IVF clusters
+  const size_t N_VECTORS = n_vectors;   // Number of vectors to index
 
   // Create index, default invert list implementation is memory
   faiss::IndexFlatL2 quantizer(VEC_DIM);
