@@ -7,6 +7,7 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
@@ -14,12 +15,16 @@ def _():
 def _():
     import numpy as np
     import faiss
+
     return faiss, np
 
 
 @app.cell
 def _():
-    from sentence_transformers import SentenceTransformer # NOTE: need to install ipython when using marimo
+    from sentence_transformers import (
+        SentenceTransformer,
+    )  # NOTE: need to install ipython when using marimo
+
     return (SentenceTransformer,)
 
 
@@ -33,7 +38,6 @@ def _():
 
 @app.cell
 def _():
-
     data = [
         {
             "id": 1,
@@ -158,6 +162,7 @@ def _(embedding_size, faiss, np):
 
         print(f"Index created with {index.ntotal} vectors")
         return index
+
     return (create_index,)
 
 
@@ -201,12 +206,12 @@ def _(faiss, nlist, np):
     # get the vector ids of each cluster
     def get_cluster_ids(index):
         invlists = index.invlists
-        cluster_ids = {} # map from cluster id to list[vector id]
+        cluster_ids = {}  # map from cluster id to list[vector id]
         for list_no in range(nlist):
             sz = invlists.list_size(list_no)
             # print(f"Cluster {list_no} has size {sz}")
             if sz == 0:
-                continue # skip empty clusters
+                continue  # skip empty clusters
             ids_ptr = invlists.get_ids(list_no)
             # print(ids_ptr) # <Swig Object of type 'long long *' at 0x1346d7000>
             try:
@@ -216,6 +221,7 @@ def _(faiss, nlist, np):
             finally:
                 invlists.release_ids(list_no, ids_ptr)
         return cluster_ids
+
     return (get_cluster_ids,)
 
 
@@ -235,17 +241,19 @@ def _(index, nlist, np):
         d = ivf.d
         q = ivf.quantizer
         # Need a matrix to search, cannot search single vector
-        buf = np.empty((1, d), dtype='float32')
+        buf = np.empty((1, d), dtype="float32")
         for lid in range(nlist):
             # reconstruct centroid vector for list `lid`
             q.reconstruct(lid, buf[0])
             # ask the IVF index: who is nearest to this centroid?
             D, I = index.search(buf, 1)
-            rep_id = int(I[0, 0]) if I[0, 0] != -1 else -1  # -1 if list empty or no result
+            rep_id = (
+                int(I[0, 0]) if I[0, 0] != -1 else -1
+            )  # -1 if list empty or no result
             # print(rep_id)
             cluster_centroids[lid] = rep_id
         return cluster_centroids
-    
+
     return (get_cluster_centroids,)
 
 
@@ -267,9 +275,9 @@ def _(data, get_cluster_centroids, get_cluster_ids):
             center = cluster_centroids[cluster_id]
             ids = cluster_ids[cluster_id]
             print(f"==== Cluster {cluster_id} ====")
-            print(f"Center {center} {data[center]["desc"]}, {data[center]["player"]}")
+            print(f"Center {center} {data[center]['desc']}, {data[center]['player']}")
             for id in ids:
-                print(f"{id} {data[id]["desc"]}, {data[id]["player"]}")
+                print(f"{id} {data[id]['desc']}, {data[id]['player']}")
 
     return (print_clusters,)
 
@@ -295,6 +303,7 @@ def _(mo):
 @app.cell
 def _():
     import tantivy
+
     return (tantivy,)
 
 
@@ -312,7 +321,7 @@ def _(data, get_cluster_ids, tantivy):
 
         fts_index = tantivy.Index(schema)
         writer = fts_index.writer(num_threads=1)
-    
+
         cluster_ids = get_cluster_ids(vector_index)
         nlist = vector_index.nlist
         for cluster_id in range(nlist):
@@ -322,17 +331,22 @@ def _(data, get_cluster_ids, tantivy):
                 # FIXME: this logic is actually not right, it is indexing every document
                 # We should index every unique attributes pair's cluster id instead
                 # Which is much smaller
-                writer.add_document(tantivy.Document.from_dict({
-                    "vector_id": id,
-                    "cluster_id": cluster_id,
-                    "desc": d["desc"],
-                    "player": d["player"],
-                    "year": d["year"]
-                }))
+                writer.add_document(
+                    tantivy.Document.from_dict(
+                        {
+                            "vector_id": id,
+                            "cluster_id": cluster_id,
+                            "desc": d["desc"],
+                            "player": d["player"],
+                            "year": d["year"],
+                        }
+                    )
+                )
 
         writer.commit()
         fts_index.reload()
         return fts_index
+
     return (create_tantivy_index,)
 
 
@@ -383,6 +397,7 @@ def _():
 @app.cell
 def _():
     import inspect
+
     return (inspect,)
 
 
@@ -401,6 +416,7 @@ def _(model, np):
         # faiss requires a query matrix, not a single vector
         query_embedding = np.expand_dims(query_embedding, axis=0)
         return query_embedding
+
     return (embed_query,)
 
 
@@ -409,9 +425,11 @@ def _(data, embed_query, index, np):
     def search_cluster_no_id_selector():
         coarse_idx = np.array([[3]])
         # FIXME: I don't think whould use 0, we should calculate using actual query and centroid
-        coarse_dis = np.zeros_like(coarse_idx, dtype='float32')
+        coarse_dis = np.zeros_like(coarse_idx, dtype="float32")
         q = embed_query("forehand")
-        index.nprobe = 1 # change from 2 to 1 to deal with assert Iq.shape == (n, self.nprobe)
+        index.nprobe = (
+            1  # change from 2 to 1 to deal with assert Iq.shape == (n, self.nprobe)
+        )
         D, I = index.search_preassigned(q, 2, coarse_idx, coarse_dis)
         print(D, I)
         # Ironically, in that cluster, the first match is sinner instead of nadal
@@ -419,6 +437,7 @@ def _(data, embed_query, index, np):
         for i_q in I:
             for i in i_q:
                 print(data[i])
+
     search_cluster_no_id_selector()
     return
 
@@ -427,11 +446,11 @@ def _(data, embed_query, index, np):
 def _(data, embed_query, faiss, index, np):
     def search_cluster_id_selector():
         coarse_idx = np.array([[3]])
-        coarse_dis = np.zeros_like(coarse_idx, dtype='float32')
+        coarse_dis = np.zeros_like(coarse_idx, dtype="float32")
         q = embed_query("forehand")
         index.nprobe = 1
         # 1, 6 are the only nadal items
-        sel = faiss.IDSelectorBatch(np.array([1, 6], dtype='int64'))
+        sel = faiss.IDSelectorBatch(np.array([1, 6], dtype="int64"))
         params = faiss.SearchParameters()
         params.sel = sel
         # FIXME: params is not supported
@@ -440,8 +459,9 @@ def _(data, embed_query, faiss, index, np):
         for i_q in I:
             for i in i_q:
                 print(data[i])
+
     search_cluster_id_selector()
-        
+
     return
 
 

@@ -350,3 +350,9 @@ bool IDSelectorBatch::is_member(idx_t i) const {
     return set.count(i);
 }
 ```
+
+## Build faiss and tantivy index in rust
+
+Similar to the turpobuffer blog, we need to keep track of both the cluster id and local id in the full text index.
+
+To make our life easier, I think 
