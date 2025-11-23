@@ -232,3 +232,121 @@ shape: (1, 5)
 Free apps (price = 0): 73044
 Paid apps (price > 0): 16207
 ```
+
+## Expose id selector in faiss and use index from tantivy
+
+- [x] Can you use id selector for quantizer when using IVF index? Yes, you can pass in the id selector when searching the quantizer
+- [ ] Efficient way to pass id selector to faiss?
+  - There is builtin `IDSelectorBitmap` and `IDSelectorBatch`
+
+### Search quantizer with id selector
+
+- We use `IndexFlatL2` for quantizer, which supports id selector
+
+```cpp
+void CreateExampleIVFIndex(rust::Str index_file_name) {
+  std::cout << "Creating example IVF index in " << index_file_name << std::endl;
+  const size_t VEC_DIM = 128;      // Vector dimension
+  const size_t N_CLUSTERS = 100;   // Number of IVF clusters
+  const size_t N_VECTORS = 10'000; // Number of vectors to index
+
+  // Create index, default invert list implementation is memory
+  faiss::IndexFlatL2 quantizer(VEC_DIM);
+  faiss::IndexIVFFlat index(&quantizer, VEC_DIM, N_CLUSTERS);
+```
+
+We can first try to see if we can use id selector ...
+
+```cpp
+// IndexFlat.cpp
+void IndexFlat::search(
+        idx_t n,
+        const float* x,
+        idx_t k,
+        float* distances,
+        idx_t* labels,
+        const SearchParameters* params) const {
+    IDSelector* sel = params ? params->sel : nullptr;
+    FAISS_THROW_IF_NOT(k > 0);
+
+    // we see the distances and labels as heaps
+    if (metric_type == METRIC_INNER_PRODUCT) {
+        float_minheap_array_t res = {size_t(n), size_t(k), labels, distances};
+        knn_inner_product(x, get_xb(), d, n, ntotal, &res, sel);
+    } else if (metric_type == METRIC_L2) {
+        float_maxheap_array_t res = {size_t(n), size_t(k), labels, distances};
+        knn_L2sqr(x, get_xb(), d, n, ntotal, &res, nullptr, sel);
+    } else {
+        FAISS_THROW_IF_NOT(!sel); // TODO implement with selector
+        knn_extra_metrics(
+                x,
+                get_xb(),
+                d,
+                n,
+                ntotal,
+                metric_type,
+                metric_arg,
+                k,
+                distances,
+                labels);
+    }
+}
+```
+
+Yeah we can pass id selector for quantizer
+
+```cpp
+void SearchExampleIVFIndex(rust::Str index_file_name) {
+  // 1. Search the quantizer to the clusters
+  double t0 = faiss::getmillisecs();
+  // Pass id selector to quantizer
+  faiss::SearchParameters quantizer_params = faiss::SearchParameters();
+  // NOTE: Without this, the clusters are 6, 42
+  std::vector<idx_t> ids = {1, 2};
+  faiss::IDSelectorArray id_selector =
+      faiss::IDSelectorArray(ids.size(), ids.data());
+  quantizer_params.sel = &id_selector;
+  ivf_index->quantizer->search(n, x.data(), nprobe, coarse_dis.get(), idx.get(),
+                               &quantizer_params);
+  double t1 = faiss::getmillisecs();
+  // We only have one query, so the the first nprobe entries are for one (and only) query
+  for (size_t i = 0; i < nprobe; i++) {
+    std::cout << "Probe " << i << ", cluster id: " << idx[i]
+              << ", distance: " << coarse_dis[i] << std::endl;
+  }
+}
+```
+
+### Pass id selector to faiss
+
+We can use `IDSelectorBatch` it will build the set and bitmap automatically.
+Also I think it is more efficient to build a new faiss index in memory
+with only the selected vectors base on the result from tantivy.
+
+```cpp
+IDSelectorBatch::IDSelectorBatch(size_t n, const idx_t* indices) {
+    nbits = 0;
+    while (n > ((idx_t)1 << nbits)) {
+        nbits++;
+    }
+    nbits += 5;
+    // for n = 1M, nbits = 25 is optimal, see P56659518
+
+    mask = ((idx_t)1 << nbits) - 1;
+    bloom.resize((idx_t)1 << (nbits - 3), 0);
+    for (idx_t i = 0; i < n; i++) {
+        idx_t id = indices[i];
+        set.insert(id);
+        id &= mask;
+        bloom[id >> 3] |= 1 << (id & 7);
+    }
+}
+
+bool IDSelectorBatch::is_member(idx_t i) const {
+    long im = i & mask;
+    if (!(bloom[im >> 3] & (1 << (im & 7)))) {
+        return 0;
+    }
+    return set.count(i);
+}
+```

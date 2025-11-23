@@ -88,9 +88,23 @@ void SearchExampleIVFIndex(rust::Str index_file_name) {
 
   // 1. Search the quantizer to the clusters
   double t0 = faiss::getmillisecs();
+  // Pass id selector to quantizer
+  faiss::SearchParameters quantizer_params = faiss::SearchParameters();
+  // NOTE: Without this, the clusters are 6, 42
+  std::vector<idx_t> ids = {1, 2};
+  faiss::IDSelectorArray id_selector =
+      faiss::IDSelectorArray(ids.size(), ids.data());
+  quantizer_params.sel = &id_selector;
   ivf_index->quantizer->search(n, x.data(), nprobe, coarse_dis.get(), idx.get(),
-                               nullptr); // TODO: pass params->quantizer_params
+                               &quantizer_params);
   double t1 = faiss::getmillisecs();
+  // We only have one query, so the the first nprobe entries are for one (and
+  // only) query
+  for (size_t i = 0; i < nprobe; i++) {
+    std::cout << "Probe " << i << ", cluster id: " << idx[i]
+              << ", distance: " << coarse_dis[i] << std::endl;
+  }
+
   // TODO: In faiss code, it will call the prefetch_lists() to prefetch the
   // clusters. In our rust code, we can fetch the clusters in parallel using
   // async io and block until all of them are fetched/error out
@@ -102,7 +116,8 @@ void SearchExampleIVFIndex(rust::Str index_file_name) {
 
   // 2. Search matched clusters to get top k across all matched clusters
   faiss::IndexIVFStats ivf_stats;
-  const faiss::IVFSearchParameters *params = nullptr;
+  faiss::IVFSearchParameters *params = nullptr;
+  params->sel = nullptr; // TODO: set the correct id selector
   ivf_index->search_preassigned(
       n, x.data(), k, idx.get(), coarse_dis.get(),
       distances.data(), // NOTE: Passing raw pointer fine because there is at

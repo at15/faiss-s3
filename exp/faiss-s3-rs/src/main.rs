@@ -2,13 +2,13 @@ use anyhow::Result;
 // use mistralrs::{EmbeddingModelBuilder, EmbeddingRequest};
 use object_store::aws::AmazonS3Builder;
 use object_store::{ObjectStore, path::Path};
+use serde::Deserialize;
 use std::sync::Arc;
 use std::time::Instant;
 use tantivy::collector::TopDocs;
 use tantivy::query::{QueryParser, RangeQuery};
 use tantivy::schema::*;
-use tantivy::{doc, Index, IndexWriter, ReloadPolicy, TantivyDocument};
-use serde::Deserialize;
+use tantivy::{Index, IndexWriter, ReloadPolicy, TantivyDocument, doc};
 
 #[derive(Debug, Deserialize)]
 struct SoftwareRecord {
@@ -45,15 +45,19 @@ fn test_tantivy() -> tantivy::Result<()> {
     let mut schema_builder = Schema::builder();
 
     // Text fields - stored and indexed for full-text search
-    let main_category = schema_builder.add_text_field("main_category", TEXT | STORED);
+    let main_category =
+        schema_builder.add_text_field("main_category", TEXT | STORED);
     let title = schema_builder.add_text_field("title", TEXT | STORED);
-    let description = schema_builder.add_text_field("description", TEXT | STORED);
+    let description =
+        schema_builder.add_text_field("description", TEXT | STORED);
     let categories = schema_builder.add_text_field("categories", TEXT | STORED);
 
     // Numeric fields
     let price = schema_builder.add_f64_field("price", INDEXED | STORED | FAST);
-    let average_rating = schema_builder.add_f64_field("average_rating", INDEXED | STORED | FAST);
-    let rating_number = schema_builder.add_u64_field("rating_number", INDEXED | STORED | FAST);
+    let average_rating =
+        schema_builder.add_f64_field("average_rating", INDEXED | STORED | FAST);
+    let rating_number =
+        schema_builder.add_u64_field("rating_number", INDEXED | STORED | FAST);
 
     let schema = schema_builder.build();
 
@@ -98,7 +102,8 @@ fn test_tantivy() -> tantivy::Result<()> {
 
     println!("\n=== TEXT SEARCH: 'game' ===");
     // 7. Text search using QueryParser - search in title, description, and categories
-    let query_parser = QueryParser::for_index(&index, vec![title, description, categories]);
+    let query_parser =
+        QueryParser::for_index(&index, vec![title, description, categories]);
     let query = query_parser.parse_query("game")?;
 
     let top_docs = searcher.search(&query, &TopDocs::with_limit(5))?;
@@ -106,12 +111,25 @@ fn test_tantivy() -> tantivy::Result<()> {
 
     for (score, doc_address) in top_docs {
         let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
-        let title_val = retrieved_doc.get_first(title).and_then(|v| v.as_str()).unwrap_or("");
-        let rating_val = retrieved_doc.get_first(average_rating).and_then(|v| v.as_f64()).unwrap_or(0.0);
-        let categories_val = retrieved_doc.get_first(categories).and_then(|v| v.as_str()).unwrap_or("");
-        println!("  [Score: {:.2}] {} (Rating: {:.1}, Categories: {})",
-                 score, title_val, rating_val,
-                 if categories_val.is_empty() { "None" } else { categories_val });
+        let title_val = retrieved_doc
+            .get_first(title)
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let rating_val = retrieved_doc
+            .get_first(average_rating)
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let categories_val = retrieved_doc
+            .get_first(categories)
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        println!(
+            "  [Score: {:.2}] {} (Rating: {:.1}, Categories: {})",
+            score,
+            title_val,
+            rating_val,
+            if categories_val.is_empty() { "None" } else { categories_val }
+        );
     }
 
     println!("\n=== FREE SOFTWARE: price = 0 ===");
@@ -125,12 +143,20 @@ fn test_tantivy() -> tantivy::Result<()> {
     println!("Found {} free apps (showing 5):", top_docs.len());
     for (_score, doc_address) in top_docs {
         let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
-        let title_val = retrieved_doc.get_first(title).and_then(|v| v.as_str()).unwrap_or("");
-        let rating_val = retrieved_doc.get_first(average_rating).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let title_val = retrieved_doc
+            .get_first(title)
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let rating_val = retrieved_doc
+            .get_first(average_rating)
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
         println!("  {} (Rating: {:.1})", title_val, rating_val);
     }
 
-    println!("\n=== CATEGORY SEARCH: Education books with 'English' in title ===");
+    println!(
+        "\n=== CATEGORY SEARCH: Education books with 'English' in title ==="
+    );
     // 9. Search with category filter and text query
 
     // Text search in title
@@ -143,19 +169,34 @@ fn test_tantivy() -> tantivy::Result<()> {
 
     // Combine with boolean query
     let bool_query = BooleanQuery::from(vec![
-        (Occur::Must, title_query),       // Scoring query on title
-        (Occur::Must, category_query),    // Must have Education in categories
+        (Occur::Must, title_query), // Scoring query on title
+        (Occur::Must, category_query), // Must have Education in categories
     ]);
 
     let top_docs = searcher.search(&bool_query, &TopDocs::with_limit(5))?;
     println!("Found {} results:", top_docs.len());
     for (score, doc_address) in top_docs {
         let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
-        let title_val = retrieved_doc.get_first(title).and_then(|v| v.as_str()).unwrap_or("");
-        let rating_val = retrieved_doc.get_first(average_rating).and_then(|v| v.as_f64()).unwrap_or(0.0);
-        let categories_val = retrieved_doc.get_first(categories).and_then(|v| v.as_str()).unwrap_or("");
-        println!("  [Score: {:.2}] {} (Rating: {:.1})", score, title_val, rating_val);
-        println!("    Categories: {}", if categories_val.is_empty() { "None" } else { categories_val });
+        let title_val = retrieved_doc
+            .get_first(title)
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let rating_val = retrieved_doc
+            .get_first(average_rating)
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let categories_val = retrieved_doc
+            .get_first(categories)
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        println!(
+            "  [Score: {:.2}] {} (Rating: {:.1})",
+            score, title_val, rating_val
+        );
+        println!(
+            "    Categories: {}",
+            if categories_val.is_empty() { "None" } else { categories_val }
+        );
     }
 
     println!("\n=== HIGH RATED GAMES: rating >= 4.5 + 'game' ===");
@@ -178,11 +219,22 @@ fn test_tantivy() -> tantivy::Result<()> {
     println!("Found {} highly rated games:", top_docs.len());
     for (score, doc_address) in top_docs {
         let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
-        let title_val = retrieved_doc.get_first(title).and_then(|v| v.as_str()).unwrap_or("");
-        let rating_val = retrieved_doc.get_first(average_rating).and_then(|v| v.as_f64()).unwrap_or(0.0);
-        let price_val = retrieved_doc.get_first(price).and_then(|v| v.as_f64()).unwrap_or(0.0);
-        println!("  [Score: {:.2}] {} (Rating: {:.1}, Price: ${:.2})",
-                 score, title_val, rating_val, price_val);
+        let title_val = retrieved_doc
+            .get_first(title)
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let rating_val = retrieved_doc
+            .get_first(average_rating)
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let price_val = retrieved_doc
+            .get_first(price)
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        println!(
+            "  [Score: {:.2}] {} (Rating: {:.1}, Price: ${:.2})",
+            score, title_val, rating_val, price_val
+        );
     }
 
     println!("\n=== STATISTICS ===");
@@ -262,11 +314,11 @@ fn test_embedding_random() -> Result<()> {
 //     Ok(())
 // }
 
-fn _test_ivf_local_file() {
-    faiss_s3_rs::create_example_ivf_index("example.ivf");
-    let offset = faiss_s3_rs::get_cluster_data_offset("example.ivf");
+fn test_ivf_local_file() {
+    // faiss_s3_rs::create_example_ivf_index("example.ivf");
+    // let offset = faiss_s3_rs::get_cluster_data_offset("example.ivf");
     // 52139, matches the python output from tests/test_meta.py
-    println!("Cluster data offset: {:?}", offset);
+    // println!("Cluster data offset: {:?}", offset);
     faiss_s3_rs::search_example_ivf_index("example.ivf");
 }
 
@@ -395,7 +447,7 @@ async fn _test_object_store() -> Result<(), Box<dyn std::error::Error>> {
 async fn main() {
     println!("Hello, world!");
 
-    // test_ivf_local_file();
+    test_ivf_local_file();
 
     // if let Err(e) = test_object_store().await {
     //     eprintln!("Error in test_object_store: {}", e);
@@ -413,7 +465,7 @@ async fn main() {
     //     eprintln!("Error in test_embedding: {}", e);
     // }
 
-    if let Err(e) = test_tantivy() {
-        eprintln!("Error in test_tantivy: {}", e);
-    }
+    // if let Err(e) = test_tantivy() {
+    //     eprintln!("Error in test_tantivy: {}", e);
+    // }
 }
