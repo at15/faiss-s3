@@ -1,6 +1,7 @@
 use anyhow::Result;
 use serde::Deserialize;
 use std::time::Instant;
+use std::collections::HashMap;
 
 use tantivy::collector::TopDocs;
 use tantivy::query::{QueryParser, RangeQuery};
@@ -32,7 +33,7 @@ fn load_software_data(csv_path: &str) -> Result<Vec<SoftwareRecord>> {
 }
 
 #[test]
-fn test_tantivy() -> tantivy::Result<()> {
+fn test_tantivy_fts() -> tantivy::Result<()> {
     println!("=== LOADING SOFTWARE DATA FROM CSV ===");
 
     // Load CSV data
@@ -238,6 +239,57 @@ fn test_tantivy() -> tantivy::Result<()> {
     println!("\n=== STATISTICS ===");
     // 11. Show some statistics using fast fields
     println!("Total documents indexed: {}", searcher.num_docs());
+
+    Ok(())
+}
+
+struct Product {
+    price: f64,
+    category: String,
+    cluster: u64,
+    cluster_local_id: u64, // TODO: we might need the vector id (across clusters) as well
+}
+
+// Used as key for grouping
+struct ProductAttributes {
+    price: f64,
+    category: String,
+}
+
+fn test_tantivy_attributes_to_cluster() -> tantivy::Result<()> {
+    // Build two level index like turpobuffer does for filter by attributes
+    // and map back to the vector index's cluster and local id
+
+    let products = vec![
+        Product {
+            price: 1.0,
+            category: "book".to_string(),
+            cluster: 0,
+            cluster_local_id: 0,
+        },
+        Product {
+            price: 1.0,
+            category: "book".to_string(),
+            cluster: 0,
+            cluster_local_id: 1,
+        },
+        Product {
+            price: 2.0,
+            category: "software".to_string(),
+            cluster: 1,
+            cluster_local_id: 0,
+        },
+    ];
+
+    // FIXME: impl
+    let mut attributes_to_cluster: HashMap<ProductAttributes, Vec<u64>> = HashMap::new();
+    for product in products {
+        let attributes = ProductAttributes {
+            price: product.price,
+            category: product.category,
+        };
+        attributes_to_cluster.entry(attributes).or_insert_with(Vec::new).push(product.cluster);
+    }
 
     Ok(())
 }

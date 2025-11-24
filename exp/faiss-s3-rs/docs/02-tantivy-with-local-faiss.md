@@ -361,3 +361,110 @@ You can embed text and image into same vector space https://huggingface.co/nomic
 
 Similar to the turpobuffer blog https://turbopuffer.com/blog/native-filtering, we need to keep track of both the cluster id and local id in the full text index.
 
+From the blog, they got two level of index to point from attributes to vector index.
+
+- cluster level points to cluster
+- row level points to individual vector, e.g. `0:1` means cluster 0, local id 1
+
+```text
+|-----------------------------------------------------|
+| row-level attribute indexes:                        |
+|   path=foo/readme.md -> [0:0, 0:1, 1:2]             |
+|   path=foo/src/main.rs -> [5:0, 5:1]                |
+|   path=foo/src/bar.rs -> [4:0, 5:2, 5:3, 5:4]       |
+|   ...                                               |
+|-----------------------------------------------------|
+| cluster-level attribute indexes:                    |
+|   path=foo/readme.md -> [0, 1]                      |
+|   path=foo/src/main.rs -> [5]                       |
+|   path=foo/src/bar.rs -> [4, 5]                     |
+|   ...                                               |
+|-----------------------------------------------------|
+```
+
+We use tantivy to build the attribute index for filter.
+Let's take amazon products as example, each product has
+fields like the following:
+
+- id, integer
+ - NOTE: You cannot specify the internal doc id in tantivy, it has to be stored like other fields
+- title, text (tokenized)
+- categories, text
+- price, float
+
+If we do not consider vector index, the index looks like following:
+
+```text
+category=software -> [doc0, doc2]
+price=1.0 -> [doc1, doc2]
+```
+
+If we consider vector index, then we need new fields and extra lookup.
+For example if we save the cluster and local id (inside the cluster).
+Then the attributes of documents are
+
+- id,
+- title,
+- categories,
+- price,
+- cluster+local_id
+
+When we filter by attributes, we can get the tantivy doc id, then use
+that to fetch the clsuter+local_id and determine what clusters and vectors we need to search.
+
+This a one level attributes index because we are indexing all the documents across clusters in one tantivy index.
+
+If we want a two level attributes index like turpobuffer does.
+We need to build a cluster level tantivy index and one tantivy
+index for each cluster for vector level.
+
+There are two ways to build the cluster level tantivy index:
+
+- naive way, each document only has one attribute, e.g. `price=1.0, cluster=0`
+- unique attributes sets within the cluster, e.g. `price=1.0, category=software cluster=0`
+
+The problem with the naivy approach is when there are multiple
+filters, you will get more clusters that may not actually have
+the vector matching the filters.
+
+For example, the query is `price=1.0, category=software`.
+Using the naivy way, the tantivy index tells:
+
+- `price=1.0` has cluster 0 and 1
+- `category=software` has cluster 0 and 1
+
+But that doesn't mean the cluster 0 and 1 has vector matches both filters.
+It is possible the full documents in these clusters are
+
+- `price=1.0, category=book`
+- `price=2.0, category=software`
+
+However, using the unique attributes sets solve this problem.
+For the above example, the unique attributes set are:
+
+- `price=1.0, category=software cluster=0`
+- `price=2.0, category=software cluster=0`
+
+When the query is `price=1.0, category=software`, the tantivy index would
+tell there is no cluster matching the filters.
+
+To get the unique attributes sets, we basically need to group the clusters by the sorted attributes.
+
+Let's say the orginal documents are
+
+- `price=1.0, category=book cluster=0 cluster_id=0`
+- `price=1.0, category=book cluster=0 cluster_id=1`
+- `price=2.0, category=software cluster=1 cluster_id=0`
+
+The we endup having a map like this:
+
+```text
+{
+  "price=1.0, category=book": {
+    "cluster=0": [0, 1]
+  },
+  "price=2.0, category=software": {
+    "cluster=1": [0]
+  },
+}
+```
