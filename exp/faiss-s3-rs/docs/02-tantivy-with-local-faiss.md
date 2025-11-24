@@ -351,8 +351,13 @@ bool IDSelectorBatch::is_member(idx_t i) const {
 }
 ```
 
+## Generate embedding in rust
+
+To make our life easier, I think we need to generate embedding in rust.
+`fastembed-rs` works for both text and image. When using nomic's embedding,
+You can embed text and image into same vector space https://huggingface.co/nomic-ai/nomic-embed-vision-v1.5
+
 ## Build faiss and tantivy index in rust
 
-Similar to the turpobuffer blog, we need to keep track of both the cluster id and local id in the full text index.
+Similar to the turpobuffer blog https://turbopuffer.com/blog/native-filtering, we need to keep track of both the cluster id and local id in the full text index.
 
-To make our life easier, I think 

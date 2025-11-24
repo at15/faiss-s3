@@ -8,3 +8,4 @@ build/
 *.jsonl
 __marimo__
 *.csv
+.fastembed_cache/

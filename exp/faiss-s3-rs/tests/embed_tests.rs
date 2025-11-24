@@ -1,4 +1,9 @@
 use anyhow::Result;
+use fastembed::{
+    EmbeddingModel, ImageEmbedding, ImageEmbeddingModel, ImageInitOptions,
+    InitOptions, TextEmbedding,
+};
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 // Too slow and let's just use random vectors for now
@@ -69,5 +74,61 @@ fn test_embedding_random() -> Result<()> {
         n_clusters,
     );
 
+    Ok(())
+}
+
+#[test]
+fn test_fastembed_text() -> Result<()> {
+    // Must be mut because embed takes mutable reference
+    // TODO: Why embed takes mutable reference?
+    let mut model = TextEmbedding::try_new(
+        InitOptions::new(EmbeddingModel::AllMiniLML6V2)
+            .with_show_download_progress(true),
+    )?;
+
+    let documents = vec![
+        "passage: Hello, World!",
+        "query: Hello, World!",
+        "passage: This is an example passage.",
+        // You can leave out the prefix but it's recommended
+        "fastembed-rs is licensed under Apache  2.0",
+    ];
+
+    // Generate embeddings with the default batch size, 256
+    let embeddings = model.embed(documents, None)?;
+
+    println!("Embeddings length: {}", embeddings.len()); // -> Embeddings length: 4
+    println!("Embedding dimension: {}", embeddings[0].len());
+    Ok(())
+}
+
+#[test]
+fn test_fastembed_image() -> Result<()> {
+    // With custom options
+    let mut model = ImageEmbedding::try_new(
+        ImageInitOptions::new(ImageEmbeddingModel::ClipVitB32)
+            .with_show_download_progress(true),
+    )?;
+    let base_path = Path::new("dataset/caltech-101/101_ObjectCategories");
+    let categories = vec!["airplanes", "camera", "panda", "umbrella"];
+
+    let mut all_images = Vec::new();
+
+    for category in &categories {
+        let category_path = base_path.join(category);
+        let category_images: Vec<PathBuf> = std::fs::read_dir(category_path)?
+            .take(10)
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        all_images.extend(category_images);
+    }
+
+    let images = all_images.iter().collect::<Vec<&PathBuf>>();
+
+    // Generate embeddings with the default batch size, 256
+    let embeddings = model.embed(images, None)?;
+
+    println!("Embeddings length: {}", embeddings.len()); // -> Embeddings length: 2
+    println!("Embedding dimension: {}", embeddings[0].len()); // -> Embedding dimension: 512
     Ok(())
 }
