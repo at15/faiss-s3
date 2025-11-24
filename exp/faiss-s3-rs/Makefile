@@ -19,4 +19,5 @@ format:
 .PHONY: test
 test: format
 # TODO: Manually define the tests we are running right now.
-	cargo test --test embed_tests test_fastembed_image -- --nocapture
+# cargo test --test embed_tests test_fastembed_image -- --nocapture
+	cargo test --test tantivy_tests test_tantivy_attributes_to_cluster -- --nocapture
