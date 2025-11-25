@@ -468,3 +468,20 @@ The we endup having a map like this:
   },
 }
 ```
+
+We actually got the two level cluster working
+
+- First one is sort by attributes index then build per cluster index
+- Second n_cluster indexes are smaller, per cluster and does not need to be loaded until needed
+
+There are some new questions though:
+
+- What if we cluster by different vectorized fields, e.g. title and description. In that case we are duplicating attributes index for each vectorized fields
+
+Next step should be
+
+- Pick a dataset
+- Clustering using faiss
+- Generate the two level tantivy index
+- Get local file version working
+- Get S3 version working
